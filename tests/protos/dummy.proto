@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+message DummyRequest {
+    string input = 1;
+}
+
+message DummyResponse {
+    string output = 1;
+}
+
+service DummyService {
+    rpc Execute (DummyRequest) returns (DummyResponse);
+}

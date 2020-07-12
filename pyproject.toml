@@ -1,0 +1,42 @@
+[tool.poetry]
+name = "grpc-interceptor"
+version = "0.1.0"
+description = "Simplifies gRPC interceptors"
+license = "MIT"
+readme = "README.md"
+homepage = "https://github.com/d5h/grpc-interceptor"
+repository = "https://github.com/d5h/grpc-interceptor"
+keywords = ["grpc", "interceptor"]
+authors = ["Dan Hipschman"]
+
+[tool.poetry.dependencies]
+python = "^3.6"
+grpcio = "^1.8.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "^5.4.3"
+grpcio-tools = "^1.8.0"
+coverage = {extras = ["toml"], version = "^5.2"}
+pytest-cov = "^2.10.0"
+black = "^19.10b0"
+flake8 = "^3.8.3"
+flake8-bandit = "^2.1.2"
+flake8-bugbear = "^20.1.4"
+flake8-import-order = "^0.18.1"
+safety = "^1.9.0"
+mypy = "^0.782"
+mypy-protobuf = "^1.23"
+
+[tool.coverage.paths]
+source = ["src"]
+
+[tool.coverage.run]
+branch = true
+source = ["grpc_interceptor"]
+
+[tool.coverage.report]
+show_missing = true
+
+[build-system]
+requires = ["poetry>=0.12"]
+build-backend = "poetry.masonry.api"

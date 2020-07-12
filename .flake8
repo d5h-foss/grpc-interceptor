@@ -1,0 +1,12 @@
+[flake8]
+select = B,B9,C,E,F,I,S,W
+exclude = *_pb2.py,*_pb2_grpc.py
+
+application-import-names = grpc_interceptor,tests
+import-order-style = google
+
+max-complexity = 10
+max-line-length = 88
+
+# asserts in tests are OK
+per-file-ignores = tests/*:S101
