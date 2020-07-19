@@ -53,6 +53,15 @@ def test_custom_details(interceptors):
         assert e.value.details() == "custom"
 
 
+def test_non_grpc_exception(interceptors):
+    """Exceptions other than GrpcExceptions are ignored."""
+    special_cases = {"error": lambda _: _raise(ValueError("oops"))}
+    with dummy_client(special_cases=special_cases, interceptors=interceptors) as client:
+        with pytest.raises(grpc.RpcError) as e:
+            client.Execute(DummyRequest(input="error"))
+        assert e.value.code() == grpc.StatusCode.UNKNOWN
+
+
 def test_all_exceptions(interceptors):
     """Every gRPC status code is represented, and they each are unique.
 

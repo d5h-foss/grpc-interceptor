@@ -22,7 +22,7 @@ class ExceptionToStatusInterceptor(Interceptor):
         context: grpc.ServicerContext,
         method_name: str,
     ) -> Any:
-        """Calls the RPC handler, catch GrpcException, and reraise the error."""
+        """Do not call this directly; use the interceptor kwarg on grpc.server()."""
         try:
             return method(request, context)
         except GrpcException as e:

@@ -112,3 +112,12 @@ catching exceptions in your service handler, or passing the context down into
 helper functions so they can call ``context.abort`` or ``context.set_code``. It allows
 the more Pythonic approach of just raising an exception from anywhere in the code,
 and having it be handled automatically.
+
+Limitations
+-----------
+
+These are the current limitations, although supporting these is possible. Contributions
+or requests are welcome.
+
+* ``Interceptor`` currently only supports unary-unary RPCs.
+* The package only provides service interceptors.

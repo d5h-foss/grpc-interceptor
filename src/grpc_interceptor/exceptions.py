@@ -1,4 +1,8 @@
-"""Exceptions for ExceptionToStatusInterceptor."""
+"""Exceptions for ExceptionToStatusInterceptor.
+
+See https://grpc.github.io/grpc/core/md_doc_statuscodes.html for the source of truth
+on status code meanings.
+"""
 
 from typing import Optional
 
@@ -10,10 +14,13 @@ class GrpcException(Exception):
 
     Generally you would not use this class directly, but rather use a subclass
     representing one of the standard gRPC status codes (see:
-    https://grpc.github.io/grpc/core/md_doc_statuscodes.html).
+    https://grpc.github.io/grpc/core/md_doc_statuscodes.html for the official list).
 
     Attributes:
-        status_code: A grpc.StatusCode other than OK.
+        status_code: A grpc.StatusCode other than OK. The only use case for this
+            is if gRPC adds a new status code that isn't represented by one of the
+            subclasses of GrpcException. Must not be OK, because gRPC will not
+            raise an RpcError to the client if the status code is OK.
         details: A string with additional informantion about the error.
     """
 
@@ -27,10 +34,7 @@ class GrpcException(Exception):
 
         Args:
             details: If not None, specifies a custom error message.
-            status_code: If not None, sets the status code. The only use case for this
-                is if gRPC adds a new status code that isn't represented by one of the
-                subclasses of GrpcException. Must not be OK, because gRPC will not
-                raise an RpcError to the client if the status code is OK.
+            status_code: If not None, sets the status code.
 
         Raises:
             ValueError: If status_code is OK.
