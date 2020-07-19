@@ -4,10 +4,11 @@ version = "0.1.0"
 description = "Simplifies gRPC interceptors"
 license = "MIT"
 readme = "README.md"
-homepage = "https://github.com/d5h/grpc-interceptor"
-repository = "https://github.com/d5h/grpc-interceptor"
+homepage = "https://github.com/d5h-foss/grpc-interceptor"
+repository = "https://github.com/d5h-foss/grpc-interceptor"
 keywords = ["grpc", "interceptor"]
 authors = ["Dan Hipschman"]
+documentation = "https://grpc-interceptor.readthedocs.io"
 
 [tool.poetry.dependencies]
 python = "^3.6"
@@ -28,6 +29,7 @@ mypy = "^0.782"
 mypy-protobuf = "^1.23"
 flake8-docstrings = "^1.5.0"
 sphinx = "^3.1.2"
+codecov = "^2.1.8"
 
 [tool.coverage.paths]
 source = ["src"]

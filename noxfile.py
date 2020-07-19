@@ -20,7 +20,15 @@ def tests(session):
 
 
 @nox.session(python="3.8")
-def docs(session) -> None:
+def coverage(session):
+    """Upload coverage data."""
+    install_with_constraints(session, "coverage[toml]", "codecov")
+    session.run("coverage", "xml", "--fail-under=0")
+    session.run("codecov", *session.posargs)
+
+
+@nox.session(python="3.8")
+def docs(session):
     """Build the documentation."""
     session.run("poetry", "install", "--no-dev", external=True)
     install_with_constraints(session, "sphinx")

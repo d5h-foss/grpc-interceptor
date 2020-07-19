@@ -1,6 +1,8 @@
-_build/
+/.coverage
+/.nox/
+/.venv/
+/coverage.xml
+/dist/
+/docs/_build/
+/src/*.egg-info/
 __pycache__/
-.coverage
-.venv
-*.egg-info
-dist/
