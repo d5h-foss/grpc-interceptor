@@ -1,6 +1,9 @@
 """Nox sessions."""
 
+from contextlib import contextmanager
+from pathlib import Path
 import tempfile
+from uuid import uuid4
 
 import nox
 
@@ -72,29 +75,42 @@ def mypy(session):
 @nox.session(python="3.8")
 def safety(session):
     """Scan dependencies for insecure packages."""
-    with tempfile.NamedTemporaryFile() as requirements:
+    with _temp_file() as requirements:
         session.run(
             "poetry",
             "export",
             "--dev",
             "--format=requirements.txt",
             "--without-hashes",
-            f"--output={requirements.name}",
+            f"--output={requirements}",
             external=True,
         )
         install_with_constraints(session, "safety")
-        session.run("safety", "check", f"--file={requirements.name}", "--full-report")
+        session.run("safety", "check", f"--file={requirements}", "--full-report")
 
 
 def install_with_constraints(session, *args, **kwargs):
     """Install packages constrained by Poetry's lock file."""
-    with tempfile.NamedTemporaryFile() as requirements:
+    with _temp_file() as requirements:
         session.run(
             "poetry",
             "export",
             "--dev",
             "--format=requirements.txt",
-            f"--output={requirements.name}",
+            f"--output={requirements}",
             external=True,
         )
-        session.install(f"--constraint={requirements.name}", *args, **kwargs)
+        session.install(f"--constraint={requirements}", *args, **kwargs)
+
+
+@contextmanager
+def _temp_file():
+    # NamedTemporaryFile doesn't work on Windows.
+    path = Path(tempfile.gettempdir()) / str(uuid4())
+    try:
+        yield path
+    finally:
+        try:
+            path.unlink()
+        except FileNotFoundError:
+            pass

@@ -2,6 +2,7 @@
 
 from concurrent import futures
 from contextlib import contextmanager
+import os
 from tempfile import gettempdir
 from typing import Callable, Dict, List
 from uuid import uuid4
@@ -53,11 +54,17 @@ def dummy_client(
     dummy_service = DummyService(special_cases)
     dummy_pb2_grpc.add_DummyServiceServicer_to_server(dummy_service, server)
 
-    uds_path = f"{gettempdir()}/{uuid4()}.sock"
-    server.add_insecure_port(f"unix://{uds_path}")
+    if os.name == "nt":
+        # We use Unix domain sockets when they're supported, to avoid port conflicts.
+        # However, on Windows, just pick a port.
+        channel_descriptor = "localhost:50051"
+    else:
+        channel_descriptor = f"unix://{gettempdir()}/{uuid4()}.sock"
+
+    server.add_insecure_port(channel_descriptor)
     server.start()
 
-    channel = grpc.insecure_channel(f"unix://{uds_path}")
+    channel = grpc.insecure_channel(channel_descriptor)
     client = dummy_pb2_grpc.DummyServiceStub(channel)
 
     try:
