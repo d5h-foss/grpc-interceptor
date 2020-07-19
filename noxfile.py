@@ -19,7 +19,15 @@ def tests(session):
     session.run("pytest", *args)
 
 
-SOURCE_CODE = ["src", "tests", "noxfile.py"]
+@nox.session(python="3.8")
+def docs(session) -> None:
+    """Build the documentation."""
+    session.run("poetry", "install", "--no-dev", external=True)
+    install_with_constraints(session, "sphinx")
+    session.run("sphinx-build", "docs", "docs/_build")
+
+
+SOURCE_CODE = ["src", "tests", "noxfile.py", "docs/conf.py"]
 
 
 @nox.session(python="3.8")

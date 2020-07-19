@@ -21,16 +21,16 @@ class GrpcException(Exception):
     details: str = "Unknown exception occurred"
 
     def __init__(
-        self, status_code: Optional[StatusCode] = None, details: Optional[str] = None
+        self, details: Optional[str] = None, status_code: Optional[StatusCode] = None
     ):
         """Optionally override the status code and details.
 
         Args:
+            details: If not None, specifies a custom error message.
             status_code: If not None, sets the status code. The only use case for this
                 is if gRPC adds a new status code that isn't represented by one of the
                 subclasses of GrpcException. Must not be OK, because gRPC will not
                 raise an RpcError to the client if the status code is OK.
-            details: If not None, specifies a custom error message.
 
         Raises:
             ValueError: If status_code is OK.

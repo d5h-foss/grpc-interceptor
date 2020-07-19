@@ -30,7 +30,7 @@ class Interceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
                 the chain.
             request: The RPC request, as a protobuf message.
             context: The ServicerContext pass by gRPC to the service.
-            method_name: A string of the form "protobuf.package.Service/Method"
+            method_name: A string of the form "/protobuf.package.Service/Method"
 
         Returns:
             This should generally return the result of method(request, context), which
