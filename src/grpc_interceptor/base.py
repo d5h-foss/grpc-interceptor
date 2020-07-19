@@ -6,7 +6,13 @@ import grpc
 
 class Interceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
     @abc.abstractmethod
-    def intercept(self, method: Callable, request: Any, context: grpc.ServicerContext, method_name: str) -> Any:
+    def intercept(
+        self,
+        method: Callable,
+        request: Any,
+        context: grpc.ServicerContext,
+        method_name: str,
+    ) -> Any:
         return method(request, context)
 
     # Implementation of grpc.ServerInterceptor, do not override.

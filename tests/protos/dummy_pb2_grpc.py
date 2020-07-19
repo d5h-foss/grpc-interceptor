@@ -15,10 +15,10 @@ class DummyServiceStub(object):
             channel: A grpc.Channel.
         """
         self.Execute = channel.unary_unary(
-                '/DummyService/Execute',
-                request_serializer=tests_dot_protos_dot_dummy__pb2.DummyRequest.SerializeToString,
-                response_deserializer=tests_dot_protos_dot_dummy__pb2.DummyResponse.FromString,
-                )
+            "/DummyService/Execute",
+            request_serializer=tests_dot_protos_dot_dummy__pb2.DummyRequest.SerializeToString,
+            response_deserializer=tests_dot_protos_dot_dummy__pb2.DummyResponse.FromString,
+        )
 
 
 class DummyServiceServicer(object):
@@ -27,39 +27,51 @@ class DummyServiceServicer(object):
     def Execute(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
 
 def add_DummyServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'Execute': grpc.unary_unary_rpc_method_handler(
-                    servicer.Execute,
-                    request_deserializer=tests_dot_protos_dot_dummy__pb2.DummyRequest.FromString,
-                    response_serializer=tests_dot_protos_dot_dummy__pb2.DummyResponse.SerializeToString,
-            ),
+        "Execute": grpc.unary_unary_rpc_method_handler(
+            servicer.Execute,
+            request_deserializer=tests_dot_protos_dot_dummy__pb2.DummyRequest.FromString,
+            response_serializer=tests_dot_protos_dot_dummy__pb2.DummyResponse.SerializeToString,
+        ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'DummyService', rpc_method_handlers)
+        "DummyService", rpc_method_handlers
+    )
     server.add_generic_rpc_handlers((generic_handler,))
 
 
- # This class is part of an EXPERIMENTAL API.
+# This class is part of an EXPERIMENTAL API.
 class DummyService(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def Execute(request,
+    def Execute(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/DummyService/Execute',
+            "/DummyService/Execute",
             tests_dot_protos_dot_dummy__pb2.DummyRequest.SerializeToString,
             tests_dot_protos_dot_dummy__pb2.DummyResponse.FromString,
-            options, channel_credentials,
-            call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )

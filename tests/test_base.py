@@ -34,7 +34,7 @@ def test_call_counts():
         assert len(intr.num_errors) == 0
 
         with pytest.raises(grpc.RpcError):
-            assert client.Execute(DummyRequest(input="error"))
+            client.Execute(DummyRequest(input="error"))
 
         assert len(intr.num_calls) == 1
         assert intr.num_calls["/DummyService/Execute"] == 2
