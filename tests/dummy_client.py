@@ -1,3 +1,5 @@
+"""Defines a framework for testing interceptors."""
+
 from concurrent import futures
 from contextlib import contextmanager
 from tempfile import gettempdir
@@ -14,12 +16,24 @@ SpecialCaseFunction = Callable[[str], str]
 
 
 class DummyService(dummy_pb2_grpc.DummyServiceServicer):
+    """A gRPC service used for testing."""
+
     def __init__(self, special_cases: Dict[str, SpecialCaseFunction]):
+        """Define the special cases.
+
+        Args:
+            special_cases: A dictionary where the keys are strings, and the values are
+                functions that take and return strings. The functions can also raise
+                exceptions. When the Execute method is given a string in the dict, it
+                will call the function with that string instead, and return the result.
+                This allows testing special cases, like raising exceptions.
+        """
         self._special_cases = special_cases
 
     def Execute(
         self, request: DummyRequest, context: grpc.ServicerContext
     ) -> DummyResponse:
+        """Echo the input, or take on of the special cases actions."""
         inp = request.input
         if inp in self._special_cases:
             output = self._special_cases[inp](inp)
@@ -32,6 +46,7 @@ class DummyService(dummy_pb2_grpc.DummyServiceServicer):
 def dummy_client(
     special_cases: Dict[str, SpecialCaseFunction], interceptors: List[Interceptor],
 ):
+    """A context manager that returns a gRPC client connected to a DummyService."""
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=1), interceptors=interceptors
     )

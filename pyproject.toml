@@ -26,6 +26,7 @@ flake8-import-order = "^0.18.1"
 safety = "^1.9.0"
 mypy = "^0.782"
 mypy-protobuf = "^1.23"
+flake8-docstrings = "^1.5.0"
 
 [tool.coverage.paths]
 source = ["src"]

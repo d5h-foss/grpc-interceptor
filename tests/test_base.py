@@ -1,3 +1,5 @@
+"""Test cases for the grpc-interceptor base Interceptor."""
+
 from collections import defaultdict
 
 import grpc
@@ -9,11 +11,15 @@ from tests.protos.dummy_pb2 import DummyRequest
 
 
 class CountingInterceptor(Interceptor):
+    """A test interceptor that counts calls and exceptions."""
+
     def __init__(self):
+        """Initialize counts to zero."""
         self.num_calls = defaultdict(int)
         self.num_errors = defaultdict(int)
 
     def intercept(self, method, request, context, method_name):
+        """Count each call and exception."""
         self.num_calls[method_name] += 1
         try:
             return method(request, context)
@@ -23,6 +29,7 @@ class CountingInterceptor(Interceptor):
 
 
 def test_call_counts():
+    """The counts should be correct."""
     intr = CountingInterceptor()
     interceptors = [intr]
 

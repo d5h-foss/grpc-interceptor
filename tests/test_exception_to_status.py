@@ -1,3 +1,5 @@
+"""Test cases for ExceptionToStatusInterceptor."""
+
 import grpc
 import pytest
 
@@ -9,6 +11,7 @@ from tests.protos.dummy_pb2 import DummyRequest
 
 @pytest.fixture
 def interceptors():
+    """The interceptor chain for this test suite."""
     return [ExceptionToStatusInterceptor()]
 
 
@@ -17,6 +20,7 @@ def _raise(e: Exception):
 
 
 def test_repr():
+    """repr() should display the class name, status code, and details."""
     assert (
         repr(gx.GrpcException(details="oops"))
         == "GrpcException(status_code=UNKNOWN, details='oops')"
@@ -31,11 +35,13 @@ def test_repr():
 
 
 def test_no_exception(interceptors):
+    """An RPC with no exceptions should work as if the interceptor wasn't there."""
     with dummy_client(special_cases={}, interceptors=interceptors) as client:
         assert client.Execute(DummyRequest(input="foo")).output == "foo"
 
 
 def test_custom_details(interceptors):
+    """We can set custom details."""
     special_cases = {"error": lambda _: _raise(gx.NotFound(details="custom"))}
     with dummy_client(special_cases=special_cases, interceptors=interceptors) as client:
         assert (
@@ -48,8 +54,11 @@ def test_custom_details(interceptors):
 
 
 def test_all_exceptions(interceptors):
-    # Make sure we cover every status code,
-    # and they each produce unique codes and details
+    """Every gRPC status code is represented, and they each are unique.
+
+    Make sure we aren't missing any status codes, and that we didn't copy paste the
+    same status code or details into two different classes.
+    """
     all_status_codes = {sc for sc in grpc.StatusCode if sc != grpc.StatusCode.OK}
     seen_codes = set()
     seen_details = set()
@@ -77,5 +86,6 @@ def _snake_to_camel(s: str) -> str:
 
 
 def test_not_ok():
+    """We cannot create a GrpcException with an OK status code."""
     with pytest.raises(ValueError):
         gx.GrpcException(status_code=grpc.StatusCode.OK)
