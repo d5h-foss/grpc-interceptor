@@ -31,6 +31,9 @@ class GrpcException(Exception):
                 subclasses of GrpcException. Must not be OK, because gRPC will not
                 raise an RpcError to the client if the status code is OK.
             details: If not None, specifies a custom error message.
+
+        Raises:
+            ValueError: If status_code is OK.
         """
         if status_code is not None:
             if status_code == StatusCode.OK:
