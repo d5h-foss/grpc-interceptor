@@ -8,15 +8,19 @@ Simplified Python gRPC Interceptors
    reference
    license
 
-The primary aim of this project is to make robust Python gRPC interceptors simple.
+The primary aim of this project is to make Python gRPC interceptors simple.
 The Python ``grpc`` package provides service interceptors, but they're a bit hard to
-understand and use because of their flexibility. The ``grpc`` interceptors don't have
-direct access to the request and response objects, or the service context. Access to
-these are often desired, to be able to log data in the request or response, or set
-status codes on the context.
+use because of their flexibility. The ``grpc`` interceptors don't have direct access
+to the request and response objects, or the service context. Access to these are often
+desired, to be able to log data in the request or response, or set status codes on the
+context.
 
-The secondary aim of this project is to keep the code small and simple,
-and to keep dependencies to a minimum (the only dependency is the ``grpc`` package).
+The secondary aim of this project is to keep the code small and simple. Code you can
+read through and understand quickly gives you confidence and helps debug issues. When
+you install this package, you also don't want a bunch of other packages that might
+cause conflicts within your project. Too many dependencies also slow down installation
+as well as runtime (fresh imports take time). Hence, a goal of this project is to keep
+dependencies to a minimum. The only dependency is the ``grpc`` package.
 
 The ``grpc_interceptor`` package provides the following:
 
