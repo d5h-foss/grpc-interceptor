@@ -1,11 +1,95 @@
 [![Tests](https://github.com/d5h-foss/grpc-interceptor/workflows/Tests/badge.svg)](https://github.com/d5h-foss/grpc-interceptor/actions?workflow=Tests)
 [![Codecov](https://codecov.io/gh/d5h-foss/grpc-interceptor/branch/master/graph/badge.svg)](https://codecov.io/gh/d5h-foss/grpc-interceptor)
-[![PyPI](https://img.shields.io/pypi/v/grpc-interceptor.svg)](https://pypi.org/project/grpc-interceptor/)
 [![Read the Docs](https://readthedocs.org/projects/grpc-interceptor/badge/)](https://grpc-interceptor.readthedocs.io/)
+[![PyPI](https://img.shields.io/pypi/v/grpc-interceptor.svg)](https://pypi.org/project/grpc-interceptor/)
 
 # Summary
 
 Simplified Python gRPC interceptors.
+
+The primary aim of this project is to make Python gRPC interceptors simple.
+The Python `grpc` package provides service interceptors, but they're a bit hard to
+use because of their flexibility. The `grpc` interceptors don't have direct access
+to the request and response objects, or the service context. Access to these are often
+desired, to be able to log data in the request or response, or set status codes on the
+context.
+
+# Installation
+
+```console
+$ pip install grpc-interceptor
+```
+
+# Usage
+
+To define your own interceptor (we can use `ExceptionToStatusInterceptor` as an example):
+
+```python
+from grpc_interceptor.base import Interceptor
+
+class ExceptionToStatusInterceptor(Interceptor):
+    def intercept(
+        self,
+        method: Callable,
+        request: Any,
+        context: grpc.ServicerContext,
+        method_name: str,
+    ) -> Any:
+        """Override this method to implement a custom interceptor.
+         You should call method(request, context) to invoke the
+         next handler (either the RPC method implementation, or the
+         next interceptor in the list).
+         Args:
+             method: The next interceptor, or method implementation.
+             request: The RPC request, as a protobuf message.
+             context: The ServicerContext pass by gRPC to the service.
+             method_name: A string of the form
+                 "/protobuf.package.Service/Method"
+         Returns:
+             This should generally return the result of
+             method(request, context), which is typically the RPC
+             method response, as a protobuf message. The interceptor
+             is free to modify this in some way, however.
+         """
+        try:
+            return method(request, context)
+        except GrpcException as e:
+            context.set_code(e.status_code)
+            context.set_details(e.details)
+            raise
+```
+
+Then inject your interceptor when you create the `grpc` server:
+
+```python
+interceptors = [ExceptionToStatusInterceptor()]
+server = grpc.server(
+    futures.ThreadPoolExecutor(max_workers=10),
+    interceptors=interceptors
+)
+```
+
+To use `ExceptionToStatusInterceptor`:
+
+```python
+from grpc_interceptor.exceptions import NotFound
+
+class MyService(my_pb2_grpc.MyServiceServicer):
+    def MyRpcMethod(
+        self, request: MyRequest, context: grpc.ServicerContext
+    ) -> MyResponse:
+        thing = lookup_thing()
+        if not thing:
+            raise NotFound("Sorry, your thing is missing")
+        ...
+```
+
+This results in the gRPC status status code being set to `NOT_FOUND`,
+and the details `"Sorry, your thing is missing"`. This saves you the hassle of
+catching exceptions in your service handler, or passing the context down into
+helper functions so they can call `context.abort` or `context.set_code`. It allows
+the more Pythonic approach of just raising an exception from anywhere in the code,
+and having it be handled automatically.
 
 # Documentation
 
