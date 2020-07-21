@@ -56,6 +56,10 @@ class GrpcException(Exception):
         sc = self.status_code.name
         return f"{clsname}(status_code={sc}, details={self.details!r})"
 
+    @property
+    def status_string(self):
+        return self.status_code.name
+
 
 class Aborted(GrpcException):
     """The operation was aborted.

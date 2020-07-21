@@ -2,7 +2,9 @@
 """Client and server classes corresponding to protobuf-defined services."""
 import grpc
 
-from tests.protos import dummy_pb2 as tests_dot_protos_dot_dummy__pb2
+from grpc_interceptor.testing.protos import (
+    dummy_pb2 as grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2,
+)
 
 
 class DummyServiceStub(object):
@@ -16,8 +18,8 @@ class DummyServiceStub(object):
         """
         self.Execute = channel.unary_unary(
             "/DummyService/Execute",
-            request_serializer=tests_dot_protos_dot_dummy__pb2.DummyRequest.SerializeToString,
-            response_deserializer=tests_dot_protos_dot_dummy__pb2.DummyResponse.FromString,
+            request_serializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyRequest.SerializeToString,
+            response_deserializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyResponse.FromString,
         )
 
 
@@ -35,8 +37,8 @@ def add_DummyServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
         "Execute": grpc.unary_unary_rpc_method_handler(
             servicer.Execute,
-            request_deserializer=tests_dot_protos_dot_dummy__pb2.DummyRequest.FromString,
-            response_serializer=tests_dot_protos_dot_dummy__pb2.DummyResponse.SerializeToString,
+            request_deserializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyRequest.FromString,
+            response_serializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyResponse.SerializeToString,
         ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
@@ -65,8 +67,8 @@ class DummyService(object):
             request,
             target,
             "/DummyService/Execute",
-            tests_dot_protos_dot_dummy__pb2.DummyRequest.SerializeToString,
-            tests_dot_protos_dot_dummy__pb2.DummyResponse.FromString,
+            grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyRequest.SerializeToString,
+            grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyResponse.FromString,
             options,
             channel_credentials,
             call_credentials,
