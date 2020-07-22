@@ -5,18 +5,13 @@ import pytest
 
 from grpc_interceptor import exceptions as gx
 from grpc_interceptor.exception_to_status import ExceptionToStatusInterceptor
-from tests.dummy_client import dummy_client
-from tests.protos.dummy_pb2 import DummyRequest
+from grpc_interceptor.testing import dummy_client, DummyRequest, raises
 
 
 @pytest.fixture
 def interceptors():
     """The interceptor chain for this test suite."""
     return [ExceptionToStatusInterceptor()]
-
-
-def _raise(e: Exception):
-    raise e
 
 
 def test_repr():
@@ -34,6 +29,16 @@ def test_repr():
     )
 
 
+def test_status_string():
+    """status_string should be the string version of the status code."""
+    assert gx.GrpcException().status_string == "UNKNOWN"
+    assert (
+        gx.GrpcException(status_code=grpc.StatusCode.NOT_FOUND).status_string
+        == "NOT_FOUND"
+    )
+    assert gx.NotFound().status_string == "NOT_FOUND"
+
+
 def test_no_exception(interceptors):
     """An RPC with no exceptions should work as if the interceptor wasn't there."""
     with dummy_client(special_cases={}, interceptors=interceptors) as client:
@@ -42,7 +47,7 @@ def test_no_exception(interceptors):
 
 def test_custom_details(interceptors):
     """We can set custom details."""
-    special_cases = {"error": lambda _: _raise(gx.NotFound(details="custom"))}
+    special_cases = {"error": raises(gx.NotFound(details="custom"))}
     with dummy_client(special_cases=special_cases, interceptors=interceptors) as client:
         assert (
             client.Execute(DummyRequest(input="foo")).output == "foo"
@@ -55,7 +60,7 @@ def test_custom_details(interceptors):
 
 def test_non_grpc_exception(interceptors):
     """Exceptions other than GrpcExceptions are ignored."""
-    special_cases = {"error": lambda _: _raise(ValueError("oops"))}
+    special_cases = {"error": raises(ValueError("oops"))}
     with dummy_client(special_cases=special_cases, interceptors=interceptors) as client:
         with pytest.raises(grpc.RpcError) as e:
             client.Execute(DummyRequest(input="error"))
@@ -75,7 +80,7 @@ def test_all_exceptions(interceptors):
     for sc in all_status_codes:
         ex = getattr(gx, _snake_to_camel(sc.name))
         assert ex
-        special_cases = {"error": lambda _: _raise(ex())}
+        special_cases = {"error": raises(ex())}
         with dummy_client(
             special_cases=special_cases, interceptors=interceptors
         ) as client:

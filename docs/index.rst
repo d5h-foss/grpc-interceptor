@@ -20,7 +20,8 @@ read through and understand quickly gives you confidence and helps debug issues.
 you install this package, you also don't want a bunch of other packages that might
 cause conflicts within your project. Too many dependencies also slow down installation
 as well as runtime (fresh imports take time). Hence, a goal of this project is to keep
-dependencies to a minimum. The only dependency is the ``grpc`` package.
+dependencies to a minimum. The only core dependency is the ``grpc`` package, and the
+``testing`` extra includes ``protobuf`` as well.
 
 The ``grpc_interceptor`` package provides the following:
 
@@ -29,13 +30,22 @@ The ``grpc_interceptor`` package provides the following:
   that set the gRPC status code correctly (rather than the default of every exception
   resulting in an ``UNKNOWN`` status code). This is something for which pretty much any
   service will have a use.
+* An optional testing framework. If you're writing your own interceptors, this is useful.
 
 Installation
 ------------
 
+To install just the interceptors:
+
 .. code-block:: console
 
    $ pip install grpc-interceptor
+
+To also install the testing framework:
+
+.. code-block:: console
+
+   $ pip install grpc-interceptor[testing]
 
 Usage
 -----
@@ -112,6 +122,38 @@ catching exceptions in your service handler, or passing the context down into
 helper functions so they can call ``context.abort`` or ``context.set_code``. It allows
 the more Pythonic approach of just raising an exception from anywhere in the code,
 and having it be handled automatically.
+
+Testing
+-------
+
+The testing framework provides an actual gRPC service and client, which you can inject
+interceptors into. This allows end-to-end testing, rather than mocking things out (such
+as the context). This can catch interactions between your interceptors and the gRPC
+framework, and also allows chaining interceptors.
+
+The crux of the testing framework is the ``dummy_client`` context manager. It provides
+a client to a gRPC service, which by defaults echos the ``input`` field of the request
+to the ``output`` field of the response. You can also provide a ``special_cases`` dict
+which tells the service to call arbitrary functions when the input matches a key in the
+dict. This allows you to test things like exceptions being thrown. Here's an example
+(again using ``ExceptionToStatusInterceptor``):
+
+.. code-block:: python
+
+   from grpc_interceptor.exceptions import NotFound
+   from grpc_interceptor.exception_to_status import ExceptionToStatusInterceptor
+   from grpc_interceptor.testing import dummy_client, DummyRequest, raises
+
+   def test_exception():
+       special_cases = {"error": raises(NotFound())}
+       interceptors = [ExceptionToStatusInterceptor()]
+       with dummy_client(special_cases=special_cases, interceptors=interceptors) as client:
+           # Test a happy path first
+           assert client.Execute(DummyRequest(input="foo")).output == "foo"
+           # And now a special case
+           with pytest.raises(grpc.RpcError) as e:
+               client.Execute(DummyRequest(input="error"))
+           assert e.value.code() == grpc.StatusCode.NOT_FOUND
 
 Limitations
 -----------

@@ -1,4 +1,4 @@
-"""Defines a framework for testing interceptors."""
+"""Defines a service and client for testing interceptors."""
 
 from concurrent import futures
 from contextlib import contextmanager
@@ -10,8 +10,8 @@ from uuid import uuid4
 import grpc
 
 from grpc_interceptor.base import Interceptor
-from tests.protos import dummy_pb2_grpc
-from tests.protos.dummy_pb2 import DummyRequest, DummyResponse
+from grpc_interceptor.testing.protos import dummy_pb2_grpc
+from grpc_interceptor.testing.protos.dummy_pb2 import DummyRequest, DummyResponse
 
 SpecialCaseFunction = Callable[[str], str]
 

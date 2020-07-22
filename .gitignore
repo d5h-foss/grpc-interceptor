@@ -1,4 +1,5 @@
 /.coverage
+/.idea/
 /.nox/
 /.venv/
 /coverage.xml
@@ -6,3 +7,4 @@
 /docs/_build/
 /src/*.egg-info/
 __pycache__/
+poetry.toml

@@ -1,7 +1,7 @@
 """Base class for server-side interceptors."""
 
 import abc
-from typing import Any, Callable
+from typing import Any, Callable, NamedTuple
 
 import grpc
 
@@ -63,3 +63,53 @@ class Interceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
             request_deserializer=next_handler.request_deserializer,
             response_serializer=next_handler.response_serializer,
         )
+
+
+class MethodName(NamedTuple):
+    """Represents a gRPC method name.
+
+    gRPC methods are defined by three parts, represented by the three attributes.
+
+    Attributes:
+        package: This is defined by the `package foo.bar;` designation in the protocol
+            buffer definition, or it could be defined by the protocol buffer directory
+            structure, depending on the language
+            (see https://developers.google.com/protocol-buffers/docs/proto3#packages).
+        service: This is the service name in the protocol buffer definition (e.g.,
+            `service SearchService { ... }`.
+        method: This is the method name. (e.g., `rpc Search(...) returns (...);`).
+    """
+
+    package: str
+    service: str
+    method: str
+
+    @property
+    def fully_qualified_service(self):
+        """Return the service name prefixed with the package.
+
+        Example:
+            >>> MethodName("foo.bar", "SearchService", "Search").fully_qualified_service
+            "foo.bar.SearchService"
+        """
+        return f"{self.package}.{self.service}" if self.package else self.service
+
+
+def parse_method_name(method_name: str) -> MethodName:
+    """Parse a method name into package, service and endpoint components.
+
+    Arguments:
+        method_name: A string of the form "/foo.bar.SearchService/Search", as passed to
+            Interceptor.intercept().
+
+    Returns:
+        A MethodName object.
+
+    Example:
+        >>> parse_method_name("/foo.bar.SearchService/Search")
+        MethodName(package="foo.bar", service="SearchService", method="Search")
+    """
+    _, package_and_service, method = method_name.split("/")
+    *maybe_package, service = package_and_service.rsplit(".", maxsplit=1)
+    package = maybe_package[0] if maybe_package else ""
+    return MethodName(package, service, method)
