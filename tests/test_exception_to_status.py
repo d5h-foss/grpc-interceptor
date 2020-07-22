@@ -30,6 +30,7 @@ def test_repr():
 
 
 def test_status_string():
+    """status_string should be the string version of the status code."""
     assert gx.GrpcException().status_string == "UNKNOWN"
     assert (
         gx.GrpcException(status_code=grpc.StatusCode.NOT_FOUND).status_string

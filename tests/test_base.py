@@ -31,9 +31,11 @@ class SideEffectInterceptor(Interceptor):
     """A test interceptor that calls a function for the side effect."""
 
     def __init__(self, side_effect):
+        """Set the side effect function."""
         self._side_effect = side_effect
 
     def intercept(self, method, request, context, method_name):
+        """Call the side effect and then the RPC method."""
         self._side_effect()
         return method(request, context)
 
@@ -42,6 +44,7 @@ class UppercasingInterceptor(Interceptor):
     """A test interceptor that modifies the request by uppercasing the input field."""
 
     def intercept(self, method, request, context, method_name):
+        """Uppercases request.input."""
         request.input = request.input.upper()
         return method(request, context)
 
@@ -50,9 +53,11 @@ class AbortingInterceptor(Interceptor):
     """A test interceptor that aborts before calling the handler."""
 
     def __init__(self, message):
+        """Set the abort details."""
         self._message = message
 
     def intercept(self, method, request, context, method_name):
+        """Calls abort."""
         context.abort(grpc.StatusCode.ABORTED, self._message)
 
 
@@ -78,7 +83,7 @@ def test_call_counts():
 
 
 def test_interceptor_chain():
-    """Test that interceptors are called in the right order."""
+    """Interceptors are called in the right order."""
     trace = []
     interceptor1 = SideEffectInterceptor(lambda: trace.append(1))
     interceptor2 = SideEffectInterceptor(lambda: trace.append(2))
@@ -90,12 +95,14 @@ def test_interceptor_chain():
 
 
 def test_modifying_interceptor():
+    """Interceptors can modify requests."""
     interceptor = UppercasingInterceptor()
     with dummy_client(special_cases={}, interceptors=[interceptor]) as client:
         assert client.Execute(DummyRequest(input="test")).output == "TEST"
 
 
 def test_aborting_interceptor():
+    """context.abort called in an interceptor works."""
     interceptor = AbortingInterceptor("oh no")
     with dummy_client(special_cases={}, interceptors=[interceptor]) as client:
         with pytest.raises(grpc.RpcError) as e:
@@ -105,15 +112,22 @@ def test_aborting_interceptor():
 
 
 def test_method_name():
+    """Fields are correct and fully_qualified_service work."""
     mn = MethodName("foo.bar", "SearchService", "Search")
+    assert mn.package == "foo.bar"
+    assert mn.service == "SearchService"
+    assert mn.method == "Search"
     assert mn.fully_qualified_service == "foo.bar.SearchService"
 
+
 def test_empty_package_method_name():
+    """fully_qualified_service works when there's no package."""
     mn = MethodName("", "SearchService", "Search")
     assert mn.fully_qualified_service == "SearchService"
 
 
 def test_parse_method_name():
+    """parse_method_name parses fields when there's a package."""
     mn = parse_method_name("/foo.bar.SearchService/Search")
     assert mn.package == "foo.bar"
     assert mn.service == "SearchService"
@@ -121,6 +135,7 @@ def test_parse_method_name():
 
 
 def test_parse_empty_package():
+    """parse_method_name works with no package."""
     mn = parse_method_name("/SearchService/Search")
     assert mn.package == ""
     assert mn.service == "SearchService"
