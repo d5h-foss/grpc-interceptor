@@ -7,7 +7,6 @@
 
 Simplified Python gRPC interceptors.
 
-The primary aim of this project is to make Python gRPC interceptors simple.
 The Python `grpc` package provides service interceptors, but they're a bit hard to
 use because of their flexibility. The `grpc` interceptors don't have direct access
 to the request and response objects, or the service context. Access to these are often
@@ -16,8 +15,16 @@ context.
 
 # Installation
 
+To just get the interceptors (and probably not write your own):
+
 ```console
 $ pip install grpc-interceptor
+```
+
+To also get the testing framework, which is good if you're writing your own interceptors:
+
+```console
+$ pip install grpc-interceptor[testing]
 ```
 
 # Usage
@@ -93,4 +100,4 @@ and having it be handled automatically.
 
 # Documentation
 
-Read the [documentation here](https://grpc-interceptor.readthedocs.io/).
+Read the [complete documentation here](https://grpc-interceptor.readthedocs.io/).
