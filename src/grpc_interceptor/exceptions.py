@@ -22,6 +22,12 @@ class GrpcException(Exception):
             subclasses of GrpcException. Must not be OK, because gRPC will not
             raise an RpcError to the client if the status code is OK.
         details: A string with additional informantion about the error.
+    Args:
+        details: If not None, specifies a custom error message.
+        status_code: If not None, sets the status code.
+
+    Raises:
+        ValueError: If status_code is OK.
     """
 
     status_code: StatusCode = StatusCode.UNKNOWN
@@ -30,15 +36,6 @@ class GrpcException(Exception):
     def __init__(
         self, details: Optional[str] = None, status_code: Optional[StatusCode] = None
     ):
-        """Optionally override the status code and details.
-
-        Args:
-            details: If not None, specifies a custom error message.
-            status_code: If not None, sets the status code.
-
-        Raises:
-            ValueError: If status_code is OK.
-        """
         if status_code is not None:
             if status_code == StatusCode.OK:
                 raise ValueError("The status code for an exception cannot be OK")
@@ -64,8 +61,8 @@ class GrpcException(Exception):
             The status code as a string.
 
         Example:
-            GrpcException(status_code=StatusCode.NOT_FOUND).status_string
-            >>> "NOT_FOUND"
+            >>> GrpcException(status_code=StatusCode.NOT_FOUND).status_string
+            'NOT_FOUND'
         """
         return self.status_code.name
 

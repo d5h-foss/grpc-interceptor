@@ -2,11 +2,11 @@
 
 from typing import Callable
 
-from grpc_interceptor.testing.dummy_client import dummy_client
+from grpc_interceptor.testing.dummy_client import dummy_client, DummyService
 from grpc_interceptor.testing.protos.dummy_pb2 import DummyRequest, DummyResponse
 
 
-__all__ = ["dummy_client", "DummyRequest", "DummyResponse", "raises"]
+__all__ = ["dummy_client", "DummyRequest", "DummyResponse", "DummyService", "raises"]
 
 
 def raises(e: Exception) -> Callable:

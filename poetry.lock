@@ -790,6 +790,22 @@ version = "0.2.5"
 
 [[package]]
 category = "dev"
+description = "A rewrite of the builtin doctest module"
+name = "xdoctest"
+optional = false
+python-versions = "*"
+version = "0.13.0"
+
+[package.dependencies]
+six = "*"
+
+[package.extras]
+all = ["six", "pytest", "pytest-cov", "codecov", "scikit-build", "cmake", "ninja", "pybind11", "pygments", "colorama"]
+optional = ["pygments", "colorama"]
+tests = ["pytest", "pytest-cov", "codecov", "scikit-build", "cmake", "ninja", "pybind11"]
+
+[[package]]
+category = "dev"
 description = "Backport of pathlib-compatible object wrapper for zip files"
 marker = "python_version < \"3.8\""
 name = "zipp"
@@ -805,7 +821,7 @@ testing = ["jaraco.itertools", "func-timeout"]
 testing = ["protobuf"]
 
 [metadata]
-content-hash = "650e8d99d38442917da86ce4b7fedb55f4b00fc9932ba0c12de8bf6d57ba9e41"
+content-hash = "7994ed64d6f333dcb1efa855911ba8fcea15420b4e97d1cd49ac1e896c50d67c"
 python-versions = "^3.6"
 
 [metadata.files]
@@ -1268,6 +1284,10 @@ urllib3 = [
 wcwidth = [
     {file = "wcwidth-0.2.5-py2.py3-none-any.whl", hash = "sha256:beb4802a9cebb9144e99086eff703a642a13d6a0052920003a230f3294bbe784"},
     {file = "wcwidth-0.2.5.tar.gz", hash = "sha256:c4d647b99872929fdb7bdcaa4fbe7f01413ed3d98077df798530e5b04f116c83"},
+]
+xdoctest = [
+    {file = "xdoctest-0.13.0-py2.py3-none-any.whl", hash = "sha256:de861fd5230a46bd26c054b4981169dd963f813768cb62b62e104e4d2644ac94"},
+    {file = "xdoctest-0.13.0.tar.gz", hash = "sha256:4f113a430076561a9d7f31af65b5d5acda62ee06b05cb6894264cb9efb8196ac"},
 ]
 zipp = [
     {file = "zipp-3.1.0-py3-none-any.whl", hash = "sha256:aa36550ff0c0b7ef7fa639055d797116ee891440eac1a56f378e2d3179e0320b"},
