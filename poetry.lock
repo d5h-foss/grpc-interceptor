@@ -821,7 +821,7 @@ testing = ["jaraco.itertools", "func-timeout"]
 testing = ["protobuf"]
 
 [metadata]
-content-hash = "2df64268d4c5c8746d9415464c9b6b1f79cbab0a0f633e9a54fb314fe23db1e9"
+content-hash = "7994ed64d6f333dcb1efa855911ba8fcea15420b4e97d1cd49ac1e896c50d67c"
 python-versions = "^3.6"
 
 [metadata.files]
