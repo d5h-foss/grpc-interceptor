@@ -1,5 +1,7 @@
 """Test cases for ExceptionToStatusInterceptor."""
 
+import re
+
 import grpc
 import pytest
 
@@ -79,7 +81,7 @@ def test_non_grpc_exception_with_override():
         with pytest.raises(grpc.RpcError) as e:
             client.Execute(DummyRequest(input="error"))
         assert e.value.code() == grpc.StatusCode.INTERNAL
-        assert e.value.details() == "ValueError('oops')"
+        assert re.fullmatch(r"ValueError\('oops',?\)", e.value.details())
 
 
 def test_override_with_ok():
