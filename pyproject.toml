@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "grpc-interceptor"
-version = "0.9.0"
+version = "0.10.0"
 description = "Simplifies gRPC interceptors"
 license = "MIT"
 readme = "README.md"
@@ -36,6 +36,7 @@ mypy-protobuf = "^1.23"
 flake8-docstrings = "^1.5.0"
 sphinx = "^3.1.2"
 codecov = "^2.1.8"
+xdoctest = "^0.13.0"
 
 [tool.coverage.paths]
 source = ["src"]

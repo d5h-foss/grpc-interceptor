@@ -8,7 +8,7 @@ from uuid import uuid4
 import nox
 
 
-nox.options.sessions = "lint", "mypy", "safety", "tests"
+nox.options.sessions = "lint", "mypy", "safety", "tests", "xdoctest"
 
 
 @nox.session(python=["3.8", "3.7", "3.6"])
@@ -20,6 +20,15 @@ def tests(session):
         session, "coverage[toml]", "grpcio-tools", "pytest", "pytest-cov"
     )
     session.run("pytest", *args)
+
+
+@nox.session(python=["3.8", "3.7", "3.6"])
+def xdoctest(session) -> None:
+    """Run examples with xdoctest."""
+    args = session.posargs or ["all"]
+    session.run("poetry", "install", "--no-dev", external=True)
+    install_with_constraints(session, "xdoctest")
+    session.run("python", "-m", "xdoctest", "grpc_interceptor", *args)
 
 
 @nox.session(python="3.8")

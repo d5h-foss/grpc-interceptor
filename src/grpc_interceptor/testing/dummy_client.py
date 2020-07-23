@@ -9,7 +9,7 @@ from uuid import uuid4
 
 import grpc
 
-from grpc_interceptor.base import Interceptor
+from grpc_interceptor.base import ServiceInterceptor
 from grpc_interceptor.testing.protos import dummy_pb2_grpc
 from grpc_interceptor.testing.protos.dummy_pb2 import DummyRequest, DummyResponse
 
@@ -17,18 +17,17 @@ SpecialCaseFunction = Callable[[str], str]
 
 
 class DummyService(dummy_pb2_grpc.DummyServiceServicer):
-    """A gRPC service used for testing."""
+    """A gRPC service used for testing.
+
+    Args:
+        special_cases: A dictionary where the keys are strings, and the values are
+            functions that take and return strings. The functions can also raise
+            exceptions. When the Execute method is given a string in the dict, it
+            will call the function with that string instead, and return the result.
+            This allows testing special cases, like raising exceptions.
+    """
 
     def __init__(self, special_cases: Dict[str, SpecialCaseFunction]):
-        """Define the special cases.
-
-        Args:
-            special_cases: A dictionary where the keys are strings, and the values are
-                functions that take and return strings. The functions can also raise
-                exceptions. When the Execute method is given a string in the dict, it
-                will call the function with that string instead, and return the result.
-                This allows testing special cases, like raising exceptions.
-        """
         self._special_cases = special_cases
 
     def Execute(
@@ -45,7 +44,8 @@ class DummyService(dummy_pb2_grpc.DummyServiceServicer):
 
 @contextmanager
 def dummy_client(
-    special_cases: Dict[str, SpecialCaseFunction], interceptors: List[Interceptor],
+    special_cases: Dict[str, SpecialCaseFunction],
+    interceptors: List[ServiceInterceptor],
 ):
     """A context manager that returns a gRPC client connected to a DummyService."""
     server = grpc.server(

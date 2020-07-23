@@ -25,7 +25,7 @@ dependencies to a minimum. The only core dependency is the ``grpc`` package, and
 
 The ``grpc_interceptor`` package provides the following:
 
-* An ``Interceptor`` base class, to make it easy to define your own service interceptors.
+* A ``ServiceInterceptor`` base class, to make it easy to define your own service interceptors.
 * An ``ExceptionToStatusInterceptor`` interceptor, so your service can raise exceptions
   that set the gRPC status code correctly (rather than the default of every exception
   resulting in an ``UNKNOWN`` status code). This is something for which pretty much any
@@ -50,13 +50,14 @@ To also install the testing framework:
 Usage
 -----
 
-To define your own interceptor (we can use ``ExceptionToStatusInterceptor`` as an example):
+To define your own interceptor (we can use a simplified version of
+``ExceptionToStatusInterceptor`` as an example):
 
 .. code-block:: python
 
    from grpc_interceptor.base import Interceptor
 
-   class ExceptionToStatusInterceptor(Interceptor):
+   class ExceptionToStatusInterceptor(ServiceInterceptor):
 
        def intercept(
            self,
@@ -161,5 +162,5 @@ Limitations
 These are the current limitations, although supporting these is possible. Contributions
 or requests are welcome.
 
-* ``Interceptor`` currently only supports unary-unary RPCs.
+* ``ServiceInterceptor`` currently only supports unary-unary RPCs.
 * The package only provides service interceptors.

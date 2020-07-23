@@ -6,7 +6,7 @@ from typing import Any, Callable, NamedTuple
 import grpc
 
 
-class Interceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
+class ServiceInterceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
     """Base class for server-side interceptors.
 
     To implement an interceptor, subclass this class and override the intercept method.
@@ -43,13 +43,13 @@ class Interceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
     def intercept_service(self, continuation, handler_call_details):
         """Implementation of grpc.ServerInterceptor.
 
-        This is not part of the Interceptor API, but must have a public name. Do not
-        override it, unless you know what you're doing.
+        This is not part of the ServiceInterceptor API, but must have a public name.
+        Do not override it, unless you know what you're doing.
         """
         next_handler = continuation(handler_call_details)
         # Make sure it's unary_unary:
         if next_handler.request_streaming or next_handler.response_streaming:
-            raise ValueError("Interceptor only handles unary_unary")
+            raise ValueError("ServiceInterceptor only handles unary_unary")
 
         def invoke_intercept_method(request, context):
             next_interceptor_or_implementation = next_handler.unary_unary
@@ -90,7 +90,7 @@ class MethodName(NamedTuple):
 
         Example:
             >>> MethodName("foo.bar", "SearchService", "Search").fully_qualified_service
-            "foo.bar.SearchService"
+            'foo.bar.SearchService'
         """
         return f"{self.package}.{self.service}" if self.package else self.service
 
@@ -100,14 +100,14 @@ def parse_method_name(method_name: str) -> MethodName:
 
     Arguments:
         method_name: A string of the form "/foo.bar.SearchService/Search", as passed to
-            Interceptor.intercept().
+            ServiceInterceptor.intercept().
 
     Returns:
         A MethodName object.
 
     Example:
         >>> parse_method_name("/foo.bar.SearchService/Search")
-        MethodName(package="foo.bar", service="SearchService", method="Search")
+        MethodName(package='foo.bar', service='SearchService', method='Search')
     """
     _, package_and_service, method = method_name.split("/")
     *maybe_package, service = package_and_service.rsplit(".", maxsplit=1)

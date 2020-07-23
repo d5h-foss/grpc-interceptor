@@ -67,6 +67,27 @@ def test_non_grpc_exception(interceptors):
         assert e.value.code() == grpc.StatusCode.UNKNOWN
 
 
+def test_non_grpc_exception_with_override():
+    """We can set a custom status code when non-GrpcExceptions are raised."""
+    interceptors = [
+        ExceptionToStatusInterceptor(
+            status_on_unknown_exception=grpc.StatusCode.INTERNAL
+        )
+    ]
+    special_cases = {"error": raises(ValueError("oops"))}
+    with dummy_client(special_cases=special_cases, interceptors=interceptors) as client:
+        with pytest.raises(grpc.RpcError) as e:
+            client.Execute(DummyRequest(input="error"))
+        assert e.value.code() == grpc.StatusCode.INTERNAL
+        assert e.value.details() == "ValueError('oops')"
+
+
+def test_override_with_ok():
+    """We cannot set the default status code to OK."""
+    with pytest.raises(ValueError):
+        ExceptionToStatusInterceptor(status_on_unknown_exception=grpc.StatusCode.OK)
+
+
 def test_all_exceptions(interceptors):
     """Every gRPC status code is represented, and they each are unique.
 

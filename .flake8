@@ -1,6 +1,7 @@
 [flake8]
 select = B,B9,C,D,E,F,I,S,W
 exclude = *_pb2.py,*_pb2_grpc.py
+ignore = D107,W503
 
 application-import-names = grpc_interceptor,tests
 import-order-style = google
