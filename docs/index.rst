@@ -25,12 +25,14 @@ dependencies to a minimum. The only core dependency is the ``grpc`` package, and
 
 The ``grpc_interceptor`` package provides the following:
 
-* A ``ServiceInterceptor`` base class, to make it easy to define your own service interceptors.
+* A ``ServerInterceptor`` base class, to make it easy to define your own server-side interceptors.
+  Do not confuse this with the ``grpc.ServerInterceptor`` class.
 * An ``ExceptionToStatusInterceptor`` interceptor, so your service can raise exceptions
   that set the gRPC status code correctly (rather than the default of every exception
   resulting in an ``UNKNOWN`` status code). This is something for which pretty much any
   service will have a use.
 * An optional testing framework. If you're writing your own interceptors, this is useful.
+  If you're just using ``ExceptionToStatusInterceptor`` then you don't need this.
 
 Installation
 ------------
@@ -55,9 +57,10 @@ To define your own interceptor (we can use a simplified version of
 
 .. code-block:: python
 
-   from grpc_interceptor.base import Interceptor
+   from grpc_interceptor import ServerInterceptor
+   from grpc_interceptor.exceptions import GrpcException
 
-   class ExceptionToStatusInterceptor(ServiceInterceptor):
+   class ExceptionToStatusInterceptor(ServerInterceptor):
 
        def intercept(
            self,
@@ -141,8 +144,8 @@ dict. This allows you to test things like exceptions being thrown. Here's an exa
 
 .. code-block:: python
 
+   from grpc_interceptor import ExceptionToStatusInterceptor
    from grpc_interceptor.exceptions import NotFound
-   from grpc_interceptor.exception_to_status import ExceptionToStatusInterceptor
    from grpc_interceptor.testing import dummy_client, DummyRequest, raises
 
    def test_exception():
@@ -162,5 +165,5 @@ Limitations
 These are the current limitations, although supporting these is possible. Contributions
 or requests are welcome.
 
-* ``ServiceInterceptor`` currently only supports unary-unary RPCs.
+* ``ServerInterceptor`` currently only supports unary-unary RPCs.
 * The package only provides service interceptors.

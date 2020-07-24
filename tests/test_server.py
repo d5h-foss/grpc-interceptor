@@ -1,15 +1,15 @@
-"""Test cases for the grpc-interceptor base ServiceInterceptor."""
+"""Test cases for the grpc-interceptor base ServerInterceptor."""
 
 from collections import defaultdict
 
 import grpc
 import pytest
 
-from grpc_interceptor.base import MethodName, parse_method_name, ServiceInterceptor
+from grpc_interceptor import MethodName, parse_method_name, ServerInterceptor
 from grpc_interceptor.testing import dummy_client, DummyRequest
 
 
-class CountingInterceptor(ServiceInterceptor):
+class CountingInterceptor(ServerInterceptor):
     """A test interceptor that counts calls and exceptions."""
 
     def __init__(self):
@@ -26,7 +26,7 @@ class CountingInterceptor(ServiceInterceptor):
             raise
 
 
-class SideEffectInterceptor(ServiceInterceptor):
+class SideEffectInterceptor(ServerInterceptor):
     """A test interceptor that calls a function for the side effect."""
 
     def __init__(self, side_effect):
@@ -38,7 +38,7 @@ class SideEffectInterceptor(ServiceInterceptor):
         return method(request, context)
 
 
-class UppercasingInterceptor(ServiceInterceptor):
+class UppercasingInterceptor(ServerInterceptor):
     """A test interceptor that modifies the request by uppercasing the input field."""
 
     def intercept(self, method, request, context, method_name):
@@ -47,7 +47,7 @@ class UppercasingInterceptor(ServiceInterceptor):
         return method(request, context)
 
 
-class AbortingInterceptor(ServiceInterceptor):
+class AbortingInterceptor(ServerInterceptor):
     """A test interceptor that aborts before calling the handler."""
 
     def __init__(self, message):
