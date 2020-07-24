@@ -9,7 +9,7 @@ from uuid import uuid4
 
 import grpc
 
-from grpc_interceptor.base import ServiceInterceptor
+from grpc_interceptor.server import ServerInterceptor
 from grpc_interceptor.testing.protos import dummy_pb2_grpc
 from grpc_interceptor.testing.protos.dummy_pb2 import DummyRequest, DummyResponse
 
@@ -45,7 +45,7 @@ class DummyService(dummy_pb2_grpc.DummyServiceServicer):
 @contextmanager
 def dummy_client(
     special_cases: Dict[str, SpecialCaseFunction],
-    interceptors: List[ServiceInterceptor],
+    interceptors: List[ServerInterceptor],
 ):
     """A context manager that returns a gRPC client connected to a DummyService."""
     server = grpc.server(

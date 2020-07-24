@@ -32,9 +32,10 @@ $ pip install grpc-interceptor[testing]
 To define your own interceptor (we can use `ExceptionToStatusInterceptor` as an example):
 
 ```python
-from grpc_interceptor.base import ServiceInterceptor
+from grpc_interceptor import ServerInterceptor
+from grpc_interceptor.exceptions import GrpcException
 
-class ExceptionToStatusInterceptor(ServiceInterceptor):
+class ExceptionToStatusInterceptor(ServerInterceptor):
     def intercept(
         self,
         method: Callable,

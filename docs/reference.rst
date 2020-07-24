@@ -5,16 +5,10 @@ Reference
     :local:
     :backlinks: none
 
-grpc_interceptor.base
+grpc_interceptor
 ---------------------
 
-.. automodule:: grpc_interceptor.base
-   :members:
-
-grpc_interceptor.exception_to_status
-------------------------------------
-
-.. automodule:: grpc_interceptor.exception_to_status
+.. automodule:: grpc_interceptor
    :members:
 
 grpc_interceptor.exceptions

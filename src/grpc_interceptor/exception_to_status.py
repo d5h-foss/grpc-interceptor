@@ -4,11 +4,11 @@ from typing import Any, Callable, Optional
 
 import grpc
 
-from grpc_interceptor.base import ServiceInterceptor
 from grpc_interceptor.exceptions import GrpcException
+from grpc_interceptor.server import ServerInterceptor
 
 
-class ExceptionToStatusInterceptor(ServiceInterceptor):
+class ExceptionToStatusInterceptor(ServerInterceptor):
     """An interceptor that catches exceptions and sets the RPC status and details.
 
     ExceptionToStatusInterceptor will catch any subclass of GrpcException and set the
