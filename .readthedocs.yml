@@ -7,3 +7,4 @@ python:
     install:
     - requirements: docs/requirements.txt
     - path: .
+      extra_requirements: [testing]
