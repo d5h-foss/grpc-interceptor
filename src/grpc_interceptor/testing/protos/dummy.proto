@@ -10,4 +10,7 @@ message DummyResponse {
 
 service DummyService {
     rpc Execute (DummyRequest) returns (DummyResponse);
+    rpc ExecuteClientStream (stream DummyRequest) returns (DummyResponse);
+    rpc ExecuteServerStream (DummyRequest) returns (stream DummyResponse);
+    rpc ExecuteClientServerStream (stream DummyRequest) returns (stream DummyResponse);
 }

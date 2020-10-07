@@ -21,6 +21,21 @@ class DummyServiceStub(object):
             request_serializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyRequest.SerializeToString,
             response_deserializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyResponse.FromString,
         )
+        self.ExecuteClientStream = channel.stream_unary(
+            "/DummyService/ExecuteClientStream",
+            request_serializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyRequest.SerializeToString,
+            response_deserializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyResponse.FromString,
+        )
+        self.ExecuteServerStream = channel.unary_stream(
+            "/DummyService/ExecuteServerStream",
+            request_serializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyRequest.SerializeToString,
+            response_deserializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyResponse.FromString,
+        )
+        self.ExecuteClientServerStream = channel.stream_stream(
+            "/DummyService/ExecuteClientServerStream",
+            request_serializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyRequest.SerializeToString,
+            response_deserializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyResponse.FromString,
+        )
 
 
 class DummyServiceServicer(object):
@@ -34,11 +49,47 @@ class DummyServiceServicer(object):
         context.set_details("Method not implemented!")
         raise NotImplementedError("Method not implemented!")
 
+    def ExecuteClientStream(self, request_iterator, context):
+        # missing associated documentation comment in .proto file
+        pass
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
+
+    def ExecuteServerStream(self, request, context):
+        # missing associated documentation comment in .proto file
+        pass
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
+
+    def ExecuteClientServerStream(self, request_iterator, context):
+        # missing associated documentation comment in .proto file
+        pass
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
+
 
 def add_DummyServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
         "Execute": grpc.unary_unary_rpc_method_handler(
             servicer.Execute,
+            request_deserializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyRequest.FromString,
+            response_serializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyResponse.SerializeToString,
+        ),
+        "ExecuteClientStream": grpc.stream_unary_rpc_method_handler(
+            servicer.ExecuteClientStream,
+            request_deserializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyRequest.FromString,
+            response_serializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyResponse.SerializeToString,
+        ),
+        "ExecuteServerStream": grpc.unary_stream_rpc_method_handler(
+            servicer.ExecuteServerStream,
+            request_deserializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyRequest.FromString,
+            response_serializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyResponse.SerializeToString,
+        ),
+        "ExecuteClientServerStream": grpc.stream_stream_rpc_method_handler(
+            servicer.ExecuteClientServerStream,
             request_deserializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyRequest.FromString,
             response_serializer=grpc__interceptor_dot_testing_dot_protos_dot_dummy__pb2.DummyResponse.SerializeToString,
         ),

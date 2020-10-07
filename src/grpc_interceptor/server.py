@@ -1,7 +1,7 @@
 """Base class for server-side interceptors."""
 
 import abc
-from typing import Any, Callable, NamedTuple
+from typing import Any, Callable, NamedTuple, Tuple
 
 import grpc
 
@@ -37,7 +37,7 @@ class ServerInterceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
             is typically the RPC method response, as a protobuf message. The
             interceptor is free to modify this in some way, however.
         """
-        return method(request, context)
+        return method(request, context)  # pragma: no cover
 
     # Implementation of grpc.ServerInterceptor, do not override.
     def intercept_service(self, continuation, handler_call_details):
@@ -47,22 +47,32 @@ class ServerInterceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
         a public name. Do not override it, unless you know what you're doing.
         """
         next_handler = continuation(handler_call_details)
-        # Make sure it's unary_unary:
-        if next_handler.request_streaming or next_handler.response_streaming:
-            raise ValueError("ServerInterceptor only handles unary_unary")
+        handler_factory, next_handler_method = _get_factory_and_method(next_handler)
 
         def invoke_intercept_method(request, context):
-            next_interceptor_or_implementation = next_handler.unary_unary
             method_name = handler_call_details.method
-            return self.intercept(
-                next_interceptor_or_implementation, request, context, method_name,
-            )
+            return self.intercept(next_handler_method, request, context, method_name,)
 
-        return grpc.unary_unary_rpc_method_handler(
+        return handler_factory(
             invoke_intercept_method,
             request_deserializer=next_handler.request_deserializer,
             response_serializer=next_handler.response_serializer,
         )
+
+
+def _get_factory_and_method(
+    rpc_handler: grpc.RpcMethodHandler,
+) -> Tuple[Callable, Callable]:
+    if rpc_handler.unary_unary:
+        return grpc.unary_unary_rpc_method_handler, rpc_handler.unary_unary
+    elif rpc_handler.unary_stream:
+        return grpc.unary_stream_rpc_method_handler, rpc_handler.unary_stream
+    elif rpc_handler.stream_unary:
+        return grpc.stream_unary_rpc_method_handler, rpc_handler.stream_unary
+    elif rpc_handler.stream_stream:
+        return grpc.stream_stream_rpc_method_handler, rpc_handler.stream_stream
+    else:  # pragma: no cover
+        raise RuntimeError("RPC handler implementation does not exist")
 
 
 class MethodName(NamedTuple):

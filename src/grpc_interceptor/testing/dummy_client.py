@@ -4,7 +4,7 @@ from concurrent import futures
 from contextlib import contextmanager
 import os
 from tempfile import gettempdir
-from typing import Callable, Dict, List
+from typing import Callable, Dict, Iterable, List
 from uuid import uuid4
 
 import grpc
@@ -34,12 +34,36 @@ class DummyService(dummy_pb2_grpc.DummyServiceServicer):
         self, request: DummyRequest, context: grpc.ServicerContext
     ) -> DummyResponse:
         """Echo the input, or take on of the special cases actions."""
-        inp = request.input
-        if inp in self._special_cases:
-            output = self._special_cases[inp](inp)
-        else:
-            output = inp
+        return DummyResponse(output=self._get_output(request))
+
+    def ExecuteClientStream(
+        self, request_iter: Iterable[DummyRequest], context: grpc.ServicerContext
+    ) -> DummyResponse:
+        """Iterate over the input and concatenates the strings into the output."""
+        output = "".join(self._get_output(request) for request in request_iter)
         return DummyResponse(output=output)
+
+    def ExecuteServerStream(
+        self, request: DummyRequest, context: grpc.ServicerContext
+    ) -> Iterable[DummyResponse]:
+        """Stream one character at a time from the input."""
+        for c in self._get_output(request):
+            yield DummyResponse(output=c)
+
+    def ExecuteClientServerStream(
+        self, request_iter: Iterable[DummyRequest], context: grpc.ServicerContext
+    ) -> Iterable[DummyResponse]:
+        """Stream input to output."""
+        for request in request_iter:
+            yield DummyResponse(output=self._get_output(request))
+
+    def _get_output(self, request: DummyRequest) -> str:
+        input = request.input
+        if input in self._special_cases:
+            output = self._special_cases[input](input)
+        else:
+            output = input
+        return output
 
 
 @contextmanager
@@ -54,7 +78,7 @@ def dummy_client(
     dummy_service = DummyService(special_cases)
     dummy_pb2_grpc.add_DummyServiceServicer_to_server(dummy_service, server)
 
-    if os.name == "nt":
+    if os.name == "nt":  # pragma: no cover
         # We use Unix domain sockets when they're supported, to avoid port conflicts.
         # However, on Windows, just pick a port.
         channel_descriptor = "localhost:50051"

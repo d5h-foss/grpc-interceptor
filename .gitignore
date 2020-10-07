@@ -2,6 +2,7 @@
 /.idea/
 /.nox/
 /.venv/
+/.vscode/
 /coverage.xml
 /dist/
 /docs/_build/
