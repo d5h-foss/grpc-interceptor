@@ -20,7 +20,7 @@ DESCRIPTOR = _descriptor.FileDescriptor(
     package="",
     syntax="proto3",
     serialized_pb=_b(
-        '\n+grpc_interceptor/testing/protos/dummy.proto"\x1d\n\x0c\x44ummyRequest\x12\r\n\x05input\x18\x01 \x01(\t"\x1f\n\rDummyResponse\x12\x0e\n\x06output\x18\x01 \x01(\t28\n\x0c\x44ummyService\x12(\n\x07\x45xecute\x12\r.DummyRequest\x1a\x0e.DummyResponseb\x06proto3'
+        '\n+grpc_interceptor/testing/protos/dummy.proto"\x1d\n\x0c\x44ummyRequest\x12\r\n\x05input\x18\x01 \x01(\t"\x1f\n\rDummyResponse\x12\x0e\n\x06output\x18\x01 \x01(\t2\xe8\x01\n\x0c\x44ummyService\x12(\n\x07\x45xecute\x12\r.DummyRequest\x1a\x0e.DummyResponse\x12\x36\n\x13\x45xecuteClientStream\x12\r.DummyRequest\x1a\x0e.DummyResponse(\x01\x12\x36\n\x13\x45xecuteServerStream\x12\r.DummyRequest\x1a\x0e.DummyResponse0\x01\x12>\n\x19\x45xecuteClientServerStream\x12\r.DummyRequest\x1a\x0e.DummyResponse(\x01\x30\x01\x62\x06proto3'
     ),
 )
 
@@ -135,13 +135,40 @@ _DUMMYSERVICE = _descriptor.ServiceDescriptor(
     file=DESCRIPTOR,
     index=0,
     options=None,
-    serialized_start=111,
-    serialized_end=167,
+    serialized_start=112,
+    serialized_end=344,
     methods=[
         _descriptor.MethodDescriptor(
             name="Execute",
             full_name="DummyService.Execute",
             index=0,
+            containing_service=None,
+            input_type=_DUMMYREQUEST,
+            output_type=_DUMMYRESPONSE,
+            options=None,
+        ),
+        _descriptor.MethodDescriptor(
+            name="ExecuteClientStream",
+            full_name="DummyService.ExecuteClientStream",
+            index=1,
+            containing_service=None,
+            input_type=_DUMMYREQUEST,
+            output_type=_DUMMYRESPONSE,
+            options=None,
+        ),
+        _descriptor.MethodDescriptor(
+            name="ExecuteServerStream",
+            full_name="DummyService.ExecuteServerStream",
+            index=2,
+            containing_service=None,
+            input_type=_DUMMYREQUEST,
+            output_type=_DUMMYRESPONSE,
+            options=None,
+        ),
+        _descriptor.MethodDescriptor(
+            name="ExecuteClientServerStream",
+            full_name="DummyService.ExecuteClientServerStream",
+            index=3,
             containing_service=None,
             input_type=_DUMMYREQUEST,
             output_type=_DUMMYRESPONSE,

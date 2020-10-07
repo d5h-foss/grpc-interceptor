@@ -165,5 +165,4 @@ Limitations
 These are the current limitations, although supporting these is possible. Contributions
 or requests are welcome.
 
-* ``ServerInterceptor`` currently only supports unary-unary RPCs.
 * The package only provides service interceptors.
