@@ -4,11 +4,12 @@ from concurrent import futures
 from contextlib import contextmanager
 import os
 from tempfile import gettempdir
-from typing import Callable, Dict, Iterable, List
+from typing import Callable, Dict, Iterable, List, Optional
 from uuid import uuid4
 
 import grpc
 
+from grpc_interceptor.client import ClientInterceptor
 from grpc_interceptor.server import ServerInterceptor
 from grpc_interceptor.testing.protos import dummy_pb2_grpc
 from grpc_interceptor.testing.protos.dummy_pb2 import DummyRequest, DummyResponse
@@ -27,27 +28,32 @@ class DummyService(dummy_pb2_grpc.DummyServiceServicer):
             This allows testing special cases, like raising exceptions.
     """
 
-    def __init__(self, special_cases: Dict[str, SpecialCaseFunction]):
+    def __init__(
+        self,
+        special_cases: Dict[str, SpecialCaseFunction],
+        context_cases: Optional[Dict[str, SpecialCaseFunction]] = None,
+    ):
         self._special_cases = special_cases
+        self._context_cases = context_cases
 
     def Execute(
         self, request: DummyRequest, context: grpc.ServicerContext
     ) -> DummyResponse:
         """Echo the input, or take on of the special cases actions."""
-        return DummyResponse(output=self._get_output(request))
+        return DummyResponse(output=self._get_output(request, context))
 
     def ExecuteClientStream(
         self, request_iter: Iterable[DummyRequest], context: grpc.ServicerContext
     ) -> DummyResponse:
         """Iterate over the input and concatenates the strings into the output."""
-        output = "".join(self._get_output(request) for request in request_iter)
+        output = "".join(self._get_output(request, context) for request in request_iter)
         return DummyResponse(output=output)
 
     def ExecuteServerStream(
         self, request: DummyRequest, context: grpc.ServicerContext
     ) -> Iterable[DummyResponse]:
         """Stream one character at a time from the input."""
-        for c in self._get_output(request):
+        for c in self._get_output(request, context):
             yield DummyResponse(output=c)
 
     def ExecuteClientServerStream(
@@ -55,27 +61,35 @@ class DummyService(dummy_pb2_grpc.DummyServiceServicer):
     ) -> Iterable[DummyResponse]:
         """Stream input to output."""
         for request in request_iter:
-            yield DummyResponse(output=self._get_output(request))
+            yield DummyResponse(output=self._get_output(request, context))
 
-    def _get_output(self, request: DummyRequest) -> str:
+    def _get_output(self, request: DummyRequest, context: grpc.ServicerContext) -> str:
         input = request.input
+
+        output = input
         if input in self._special_cases:
             output = self._special_cases[input](input)
-        else:
-            output = input
+        if self._context_cases and input in self._context_cases:
+            output = self._context_cases[input](context)
+
         return output
 
 
 @contextmanager
 def dummy_client(
     special_cases: Dict[str, SpecialCaseFunction],
-    interceptors: List[ServerInterceptor],
+    context_cases: Optional[Dict[str, SpecialCaseFunction]] = None,
+    interceptors: Optional[List[ServerInterceptor]] = None,
+    client_interceptors: Optional[List[ClientInterceptor]] = None,
 ):
     """A context manager that returns a gRPC client connected to a DummyService."""
+    if not interceptors:
+        interceptors = []
+
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=1), interceptors=interceptors
     )
-    dummy_service = DummyService(special_cases)
+    dummy_service = DummyService(special_cases, context_cases)
     dummy_pb2_grpc.add_DummyServiceServicer_to_server(dummy_service, server)
 
     if os.name == "nt":  # pragma: no cover
@@ -89,6 +103,9 @@ def dummy_client(
     server.start()
 
     channel = grpc.insecure_channel(channel_descriptor)
+    if client_interceptors:
+        channel = grpc.intercept_channel(channel, *client_interceptors)
+
     client = dummy_pb2_grpc.DummyServiceStub(channel)
 
     try:
