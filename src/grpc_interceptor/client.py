@@ -130,7 +130,7 @@ class ClientInterceptor(
         """
         new_details, new_request_iterator, postprocess = self.intercept(
             call_details=call_details,
-            request_iterator=iter((request_iterator,)),
+            request_iterator=request_iterator,
             request_streaming=True,
             response_streaming=False,
         )
@@ -154,7 +154,7 @@ class ClientInterceptor(
         """
         new_details, new_request_iterator, postprocess = self.intercept(
             call_details=call_details,
-            request_iterator=iter((request_iterator,)),
+            request_iterator=request_iterator,
             request_streaming=True,
             response_streaming=True,
         )
