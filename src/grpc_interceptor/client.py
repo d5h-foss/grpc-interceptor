@@ -2,9 +2,8 @@
 
 import abc
 from dataclasses import dataclass, field
-from typing import Callable, Iterator, List, Optional, Tuple
+from typing import Any, Callable, Iterator, List, Optional, Tuple
 
-from google.protobuf.message import Message
 import grpc
 
 
@@ -50,10 +49,10 @@ class ClientInterceptor(
     def intercept(
         self,
         call_details: ClientCallDetails,
-        request_iterator: Iterator[Message],
+        request_iterator: Iterator[Any],
         request_streaming: bool,
         response_streaming: bool,
-    ) -> Tuple[ClientCallDetails, Iterator[Message], Optional[Callable]]:
+    ) -> Tuple[ClientCallDetails, Iterator[Any], Optional[Callable]]:
         """Override this method to implement a custom interceptor.
 
         This method is called for all unary and streaming RPCs with the
@@ -65,7 +64,7 @@ class ClientInterceptor(
 
         Args:
             call_details (ClientCallDetails): Describes an RPC to be invoked
-            request_iterator (Iterator[Message]): RPC request messages
+            request_iterator (Iterator[Any]): RPC request messages
             request_streaming (bool): True if RPC is client or bi-directional streaming
             response_streaming (bool): True if PRC is server or bi-directional streaming
 
@@ -76,7 +75,7 @@ class ClientInterceptor(
         return call_details, request_iterator, None  # pragma: no cover
 
     def intercept_unary_unary(
-        self, continuation: Callable, call_details: ClientCallDetails, request: Message,
+        self, continuation: Callable, call_details: ClientCallDetails, request: Any,
     ):
         """Implementation of grpc.UnaryUnaryClientInterceptor.
 
@@ -97,7 +96,7 @@ class ClientInterceptor(
         return response
 
     def intercept_unary_stream(
-        self, continuation: Callable, call_details: ClientCallDetails, request: Message,
+        self, continuation: Callable, call_details: ClientCallDetails, request: Any,
     ):
         """Implementation of grpc.UnaryStreamClientInterceptor.
 
@@ -121,7 +120,7 @@ class ClientInterceptor(
         self,
         continuation: Callable,
         call_details: ClientCallDetails,
-        request_iterator: Iterator[Message],
+        request_iterator: Iterator[Any],
     ):
         """Implementation of grpc.StreamUnaryClientInterceptor.
 
@@ -145,7 +144,7 @@ class ClientInterceptor(
         self,
         continuation: Callable,
         call_details: ClientCallDetails,
-        request_iterator: Iterator[Message],
+        request_iterator: Iterator[Any],
     ):
         """Implementation of grpc.StreamStreamClientInterceptor.
 

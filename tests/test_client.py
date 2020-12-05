@@ -17,6 +17,7 @@ class MetadataInterceptor(ClientInterceptor):
     def intercept(
         self, call_details, request_iterator, request_streaming, response_streaming
     ):
+        """Add invocation metadata to request."""
         new_details = ClientCallDetails(
             call_details.method,
             call_details.timeout,
@@ -40,6 +41,8 @@ class PostprocessInterceptor(ClientInterceptor):
     def intercept(
         self, call_details, request_iterator, request_streaming, response_streaming
     ):
+        """Log response data."""
+
         def _unary_logger(outcome):
             self._log.warning(outcome.result().output)
             return outcome
@@ -95,8 +98,8 @@ def test_metadata_server_stream(metadata_client, metadata_string):
         for r in metadata_client.ExecuteServerStream(DummyRequest(input="metadata"))
     ]
     assert (
-        "".join(server_stream_output[0 : len(metadata_string)])
-        == metadata_string  # noqa E203
+        "".join(server_stream_output[0 : len(metadata_string)])  # noqa E203
+        == metadata_string
     )
 
 
@@ -119,13 +122,13 @@ def test_metadata_client_server_stream(metadata_client, metadata_string):
 
 @pytest.fixture
 def logged_string():
-    """Expected appended response string."""
+    """Expected logged response string."""
     return "logthisthing"
 
 
 @pytest.fixture
 def postprocess_client():
-    """Client with metadata interceptor."""
+    """Client with postprocess interceptor."""
     intr = PostprocessInterceptor()
     interceptors = [intr]
 
@@ -136,12 +139,13 @@ def postprocess_client():
 
 
 def test_postprocess_unary(caplog, postprocess_client, logged_string):
+    """Response output field should be logged."""
     postprocess_client.Execute(DummyRequest(input=logged_string))
     assert logged_string in caplog.text
 
 
 def test_postprocess_server_stream(caplog, postprocess_client, logged_string):
-    """Invocation metadata should be added to the servicer context."""
+    """Response output fields should be concatenated and logged."""
     for _ in postprocess_client.ExecuteServerStream(DummyRequest(input=logged_string)):
         pass
 
@@ -149,13 +153,14 @@ def test_postprocess_server_stream(caplog, postprocess_client, logged_string):
 
 
 def test_postprocess_client_stream(caplog, postprocess_client, logged_string):
+    """Response output field should be logged."""
     client_stream_input = iter((DummyRequest(input=logged_string),))
     postprocess_client.ExecuteClientStream(client_stream_input)
     assert logged_string in caplog.text
 
 
 def test_postprocess_client_server_stream(caplog, postprocess_client, logged_string):
-    """Invocation metadata should be added to the servicer context."""
+    """Response output fields should be concatenated and logged."""
     stream_stream_input = iter((DummyRequest(input=logged_string),))
     for _ in postprocess_client.ExecuteClientServerStream(stream_stream_input):
         pass
