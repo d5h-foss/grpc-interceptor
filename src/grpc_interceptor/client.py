@@ -21,21 +21,21 @@ class ClientInterceptor(
     @abc.abstractmethod
     def intercept(
         self,
-        continuation: Callable,
-        call_details: grpc.ClientCallDetails,
+        method: Callable,
         request_or_iterator: Any,
+        call_details: grpc.ClientCallDetails,
     ) -> Tuple[grpc.ClientCallDetails, Iterator[Any], Optional[Callable]]:
         """Override this method to implement a custom interceptor.
 
-        This method is called for all unary and streaming RPCs. The
-        `request_or_iterator` parameter should be type checked to determine if this
-        is a singluar request for unary RPCs or an iterator for client-streaming or
-        client-server streaming RPCs. The interceptor implementation should call
-        `continuation` using a `grpc.ClientCallDetails` and the `request_or_iterator`
-        object as parameters.
+        This method is called for all unary and streaming RPCs. The interceptor
+        implementation should call `method` using a `grpc.ClientCallDetails` and the
+        `request_or_iterator` object as parameters. The `request_or_iterator`
+        parameter should be type checked to determine if this is a singluar request
+        for unary RPCs or an iterator for client-streaming or client-server streaming
+        RPCs.
 
         Args:
-            continuation (Callable): A function that proceeds with the invocation by
+            method (Callable): A function that proceeds with the invocation by
             executing the next interceptor in chain or invoking the actual RPC on the
             underlying Channel.
             call_details (grpc.ClientCallDetails): Describes an RPC to be invoked
@@ -46,7 +46,7 @@ class ClientInterceptor(
             continuation. This is an object that is both a Call for the RPC and a
             Future.
         """
-        return continuation(call_details, request_or_iterator)  # pragma: no cover
+        return method(call_details, request_or_iterator)  # pragma: no cover
 
     def intercept_unary_unary(
         self,
