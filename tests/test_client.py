@@ -4,8 +4,8 @@ from typing import List, Tuple
 
 import pytest
 
-from grpc_interceptor import ClientInterceptor
-from grpc_interceptor.testing import ClientCallDetails, dummy_client, DummyRequest
+from grpc_interceptor import ClientCallDetails, ClientInterceptor
+from grpc_interceptor.testing import dummy_client, DummyRequest
 
 
 class MetadataInterceptor(ClientInterceptor):

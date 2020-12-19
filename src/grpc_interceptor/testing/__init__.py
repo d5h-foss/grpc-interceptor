@@ -3,7 +3,6 @@
 from typing import Callable
 
 from grpc_interceptor.testing.dummy_client import (
-    ClientCallDetails,
     dummy_client,
     DummyService,
 )

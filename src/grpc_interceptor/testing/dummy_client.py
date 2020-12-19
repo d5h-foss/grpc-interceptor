@@ -1,6 +1,5 @@
 """Defines a service and client for testing interceptors."""
 
-from collections import namedtuple
 from concurrent import futures
 from contextlib import contextmanager
 import os
@@ -16,39 +15,6 @@ from grpc_interceptor.testing.protos import dummy_pb2_grpc
 from grpc_interceptor.testing.protos.dummy_pb2 import DummyRequest, DummyResponse
 
 SpecialCaseFunction = Callable[[str, grpc.ServicerContext], str]
-
-
-class ClientCallDetails(
-    namedtuple(
-        "ClientCallDetails",
-        (
-            "method",
-            "timeout",
-            "metadata",
-            "credentials",
-            "wait_for_ready",
-            "compression",
-        ),
-    ),
-    grpc.ClientCallDetails,
-):
-    """Describes an RPC to be invoked.
-
-    This is an EXPERIMENTAL API.
-
-    Attributes:
-        method: The method name of the RPC.
-        timeout: An optional duration of time in seconds to allow for the RPC.
-        metadata: Optional :term:`metadata` to be transmitted to the
-                  service-side of the RPC.
-        credentials: An optional CallCredentials for the RPC.
-        wait_for_ready: This is an EXPERIMENTAL argument. An optional flag to
-                        enable :term:`wait_for_ready` mechanism.
-        compression: An element of grpc.compression, e.g. grpc.compression.Gzip.
-                     This is an EXPERIMENTAL option.
-    """
-
-    pass
 
 
 class DummyService(dummy_pb2_grpc.DummyServiceServicer):

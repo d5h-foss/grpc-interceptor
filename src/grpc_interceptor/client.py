@@ -1,9 +1,43 @@
 """Base class for client-side interceptors."""
 
 import abc
-from typing import Any, Callable, Iterator, Optional, Tuple
+from collections import namedtuple
+from typing import Any, Callable, Iterator
 
 import grpc
+
+
+class ClientCallDetails(
+    namedtuple(
+        "ClientCallDetails",
+        (
+            "method",
+            "timeout",
+            "metadata",
+            "credentials",
+            "wait_for_ready",
+            "compression",
+        ),
+    ),
+    grpc.ClientCallDetails,
+):
+    """Describes an RPC to be invoked.
+
+    This is an EXPERIMENTAL API.
+
+    Attributes:
+        method: The method name of the RPC.
+        timeout: An optional duration of time in seconds to allow for the RPC.
+        metadata: Optional :term:`metadata` to be transmitted to the
+                  service-side of the RPC.
+        credentials: An optional CallCredentials for the RPC.
+        wait_for_ready: This is an EXPERIMENTAL argument. An optional flag to
+                        enable :term:`wait_for_ready` mechanism.
+        compression: An element of grpc.compression, e.g. grpc.compression.Gzip.
+                     This is an EXPERIMENTAL option.
+    """
+
+    pass
 
 
 class ClientInterceptor(
@@ -24,7 +58,7 @@ class ClientInterceptor(
         method: Callable,
         request_or_iterator: Any,
         call_details: grpc.ClientCallDetails,
-    ) -> Tuple[grpc.ClientCallDetails, Iterator[Any], Optional[Callable]]:
+    ) -> Any:
         """Override this method to implement a custom interceptor.
 
         This method is called for all unary and streaming RPCs. The interceptor
