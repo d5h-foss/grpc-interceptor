@@ -59,7 +59,7 @@ class ClientInterceptor(
         This is not part of the grpc_interceptor.ClientInterceptor API, but must have
         a public name. Do not override it, unless you know what you're doing.
         """
-        response = self.intercept(continuation, call_details, request)
+        response = self.intercept(continuation, request, call_details)
 
         return response
 
@@ -74,7 +74,7 @@ class ClientInterceptor(
         This is not part of the grpc_interceptor.ClientInterceptor API, but must have
         a public name. Do not override it, unless you know what you're doing.
         """
-        response = self.intercept(continuation, call_details, request)
+        response = self.intercept(continuation, request, call_details)
 
         return response
 
@@ -89,7 +89,7 @@ class ClientInterceptor(
         This is not part of the grpc_interceptor.ClientInterceptor API, but must have
         a public name. Do not override it, unless you know what you're doing.
         """
-        response = self.intercept(continuation, call_details, request_iterator)
+        response = self.intercept(continuation, request_iterator, call_details)
 
         return response
 
@@ -104,6 +104,6 @@ class ClientInterceptor(
         This is not part of the grpc_interceptor.ClientInterceptor API, but must have
         a public name. Do not override it, unless you know what you're doing.
         """
-        response = self.intercept(continuation, call_details, request_iterator)
+        response = self.intercept(continuation, request_iterator, call_details)
 
         return response
