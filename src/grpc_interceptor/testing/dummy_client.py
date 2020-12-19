@@ -15,7 +15,7 @@ from grpc_interceptor.server import ServerInterceptor
 from grpc_interceptor.testing.protos import dummy_pb2_grpc
 from grpc_interceptor.testing.protos.dummy_pb2 import DummyRequest, DummyResponse
 
-SpecialCaseFunction = Callable[[str], str]
+SpecialCaseFunction = Callable[[str, grpc.ServicerContext], str]
 
 
 class ClientCallDetails(
@@ -63,12 +63,9 @@ class DummyService(dummy_pb2_grpc.DummyServiceServicer):
     """
 
     def __init__(
-        self,
-        special_cases: Dict[str, SpecialCaseFunction],
-        context_cases: Optional[Dict[str, SpecialCaseFunction]] = None,
+        self, special_cases: Dict[str, SpecialCaseFunction],
     ):
         self._special_cases = special_cases
-        self._context_cases = context_cases
 
     def Execute(
         self, request: DummyRequest, context: grpc.ServicerContext
@@ -102,9 +99,7 @@ class DummyService(dummy_pb2_grpc.DummyServiceServicer):
 
         output = input
         if input in self._special_cases:
-            output = self._special_cases[input](input)
-        if self._context_cases and input in self._context_cases:
-            output = self._context_cases[input](context)
+            output = self._special_cases[input](input, context)
 
         return output
 
@@ -112,7 +107,6 @@ class DummyService(dummy_pb2_grpc.DummyServiceServicer):
 @contextmanager
 def dummy_client(
     special_cases: Dict[str, SpecialCaseFunction],
-    context_cases: Optional[Dict[str, SpecialCaseFunction]] = None,
     interceptors: Optional[List[ServerInterceptor]] = None,
     client_interceptors: Optional[List[ClientInterceptor]] = None,
 ):
@@ -123,7 +117,7 @@ def dummy_client(
     server = grpc.server(
         futures.ThreadPoolExecutor(max_workers=1), interceptors=interceptors
     )
-    dummy_service = DummyService(special_cases, context_cases)
+    dummy_service = DummyService(special_cases)
     dummy_pb2_grpc.add_DummyServiceServicer_to_server(dummy_service, server)
 
     if os.name == "nt":  # pragma: no cover
