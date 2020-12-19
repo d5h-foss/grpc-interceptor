@@ -146,39 +146,41 @@ interceptor as an example:
 
         def intercept(
             self,
-            call_details: ClientCallDetails,
-            request_iterator: Iterator[Message],
-            request_streaming: bool,
-            response_streaming: bool,
-        ) -> Tuple[ClientCallDetails, Iterator[Message], Optional[Callable]]:
+            method: Callable,
+            request_or_iterator: Any,
+            call_details: grpc.ClientCallDetails,
+        ) -> Any:
             """Override this method to implement a custom interceptor.
 
-            This method is called for all unary and streaming RPCs with the
-            appropriate boolean parameters set. The returned
-            ClientCallDetails and request message(s) will be passed to
-            either the next interceptor or RPC implementation. An optional
-            callback function can be returned to perform postprocessing on RPC
-            responses.
+            This method is called for all unary and streaming RPCs. The interceptor
+            implementation should call `method` using a `grpc.ClientCallDetails` and the
+            `request_or_iterator` object as parameters. The `request_or_iterator`
+            parameter should be type checked to determine if this is a singluar request
+            for unary RPCs or an iterator for client-streaming or client-server streaming
+            RPCs.
 
             Args:
-                call_details (ClientCallDetails): Describes an RPC to be invoked
-                request_iterator (Iterator[Message]): RPC request messages
-                request_streaming (bool): True if RPC is client or bi-directional streaming
-                response_streaming (bool): True if PRC is server or bi-directional streaming
+                method (Callable): A function that proceeds with the invocation by
+                executing the next interceptor in chain or invoking the actual RPC on the
+                underlying Channel.
+                call_details (grpc.ClientCallDetails): Describes an RPC to be invoked
+                request_or_iterator (Any): RPC request message(s)
 
             Returns:
-                This should return a tuple of ClientCallDetails, RPC request
-                message iterator, and a postprocessing callback function or None.
+                The return for an interceptor should match the return interface for a
+                continuation. This is an object that is both a Call for the RPC and a
+                Future.
             """
-            call_details.metadata.append(
-                ("authorization", "Bearer mysecrettoken")
+            new_details = ClientCallDetails(
+                call_details.method,
+                call_details.timeout,
+                [("authorization", "Bearer mysecrettoken")],
+                call_details.credentials,
+                call_details.wait_for_ready,
+                call_details.compression,
             )
 
-            return call_details, request_iterator, None
-
-An optional callback function can be included as the third element of the ``intercept``
-function's return tuple. This can be used for additional post-processing of the intercepted
-call.
+            return method(new_details, request_or_iterator)
 
 Now inject your interceptor when you create the ``grpc`` channel:
 
@@ -203,9 +205,7 @@ to the ``output`` field of the response.
 
 You can also provide a ``special_cases`` dict which tells the service to call arbitrary
 functions when the input matches a key in the dict. This allows you to test things like
-exceptions being thrown. Similarly you can provide a ``context_cases`` dict to call
-functions against the ``grpc.ServicerContext``. This can be used, for example, to include
-invocation metadata in the result text for validation.
+exceptions being thrown.
 
 Here's an example (again using ``ExceptionToStatusInterceptor``):
 
