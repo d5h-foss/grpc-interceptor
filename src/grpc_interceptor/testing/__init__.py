@@ -10,7 +10,6 @@ from grpc_interceptor.testing.protos.dummy_pb2 import DummyRequest, DummyRespons
 
 
 __all__ = [
-    "ClientCallDetails",
     "dummy_client",
     "DummyRequest",
     "DummyResponse",

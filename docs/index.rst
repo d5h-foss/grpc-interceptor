@@ -149,7 +149,7 @@ a client interceptor:
             method: Callable,
             request_or_iterator: Any,
             call_details: grpc.ClientCallDetails,
-        ) -> Any:
+        ):
             """Override this method to implement a custom interceptor.
 
             This method is called for all unary and streaming RPCs. The interceptor

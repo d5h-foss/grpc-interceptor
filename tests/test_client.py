@@ -130,10 +130,7 @@ def test_metadata_server_stream(metadata_client, metadata_string):
         r.output
         for r in metadata_client.ExecuteServerStream(DummyRequest(input="metadata"))
     ]
-    assert (
-        "".join(server_stream_output[0 : len(metadata_string)])  # noqa E203
-        == metadata_string
-    )
+    assert metadata_string in "".join(server_stream_output)
 
 
 def test_metadata_client_stream(metadata_client, metadata_string):
@@ -150,7 +147,7 @@ def test_metadata_client_server_stream(metadata_client, metadata_string):
     stream_stream_input = iter((DummyRequest(input="metadata"),))
     result = metadata_client.ExecuteClientServerStream(stream_stream_input)
     stream_stream_output = [r.output for r in result]
-    assert metadata_string in stream_stream_output[0]
+    assert metadata_string in "".join(stream_stream_output)
 
 
 def test_code_counting():

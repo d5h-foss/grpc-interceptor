@@ -113,11 +113,10 @@ class MetadataClientInterceptor(ClientInterceptor):
 
     def intercept(
         self,
-        call_details: ClientCallDetails,
-        request_iterator: Iterator[Message],
-        request_streaming: bool,
-        response_streaming: bool,
-    ) -> Tuple[ClientCallDetails, Iterator[Message], Optional[Callable]]:
+        method: Callable,
+        request_or_iterator: Any,
+        call_details: grpc.ClientCallDetails,
+    ):
         """Override this method to implement a custom interceptor.
 
         This method is called for all unary and streaming RPCs. The interceptor
@@ -156,10 +155,6 @@ class MetadataClientInterceptor(ClientInterceptor):
         return method(new_details, request_or_iterator)
 ```
 
-An optional callback function can be included as the third element of the
-`intercept` function's return tuple. This can be used for additional
-post-processing of the intercepted call.
-
 Now inject your interceptor when you create the ``grpc`` channel:
 
 ```python
@@ -168,6 +163,10 @@ with grpc.insecure_channel("grpc-server:50051") as channel:
     channel = grpc.intercept_channel(channel, *interceptors)
     ...
 ```
+
+Client interceptors can also be used to retry RPCs that fail due to specific errors, or
+a host of other use cases. There are some basic approaches in the tests to get you
+started.
 
 # Documentation
 

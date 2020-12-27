@@ -24,6 +24,11 @@ class ClientCallDetails(_ClientCallDetailsFields, grpc.ClientCallDetails):
     pass
 
 
+class ClientInterceptorReturnType(grpc.Call, grpc.Future):
+    """Return type for the ClientInterceptor.intercept method."""
+    pass
+
+
 class ClientInterceptor(
     grpc.UnaryUnaryClientInterceptor,
     grpc.UnaryStreamClientInterceptor,
@@ -42,7 +47,7 @@ class ClientInterceptor(
         method: Callable,
         request_or_iterator: Any,
         call_details: grpc.ClientCallDetails,
-    ) -> Any:
+    ) -> ClientInterceptorReturnType:
         """Override this method to implement a custom interceptor.
 
         This method is called for all unary and streaming RPCs. The interceptor
