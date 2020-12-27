@@ -103,8 +103,8 @@ and having it be handled automatically.
 
 ## Client Interceptor
 
-To define your own client interceptor, we will use a simple invocation
-metadata injecting interceptor as an example:
+We will use an invocation metadata injecting interceptor as an example of defining
+a client interceptor:
 
 ```python
 from grpc_interceptor import ClientCallDetails, ClientInterceptor
@@ -120,28 +120,40 @@ class MetadataClientInterceptor(ClientInterceptor):
     ) -> Tuple[ClientCallDetails, Iterator[Message], Optional[Callable]]:
         """Override this method to implement a custom interceptor.
 
-        This method is called for all unary and streaming RPCs with the
-        appropriate boolean parameters set. The returned
-        ClientCallDetails and request message(s) will be passed to
-        either the next interceptor or RPC implementation. An optional
-        callback function can be returned to perform postprocessing on RPC
-        responses.
+        This method is called for all unary and streaming RPCs. The interceptor
+        implementation should call `method` using a `grpc.ClientCallDetails` and the
+        `request_or_iterator` object as parameters. The `request_or_iterator`
+        parameter may be type checked to determine if this is a singluar request
+        for unary RPCs or an iterator for client-streaming or client-server streaming
+        RPCs.
 
         Args:
-            call_details (ClientCallDetails): Describes an RPC to be invoked
-            request_iterator (Iterator[Message]): RPC request messages
-            request_streaming (bool): True if RPC is client or bi-directional streaming
-            response_streaming (bool): True if PRC is server or bi-directional streaming
+            method: A function that proceeds with the invocation by executing the next
+                interceptor in the chain or invoking the actual RPC on the underlying
+                channel.
+            call_details: Describes an RPC to be invoked.
+            request_or_iterator: RPC request message or iterator of request messages
+                for streaming requests.
 
         Returns:
-            This should return a tuple of ClientCallDetails, RPC request
-            message iterator, and a postprocessing callback function or None.
+            The type of the return should match the type of the return value received
+            by calling `method`. This is an object that is both a
+            `Call <https://grpc.github.io/grpc/python/grpc.html#grpc.Call>`_ for the
+            RPC and a `Future <https://grpc.github.io/grpc/python/grpc.html#grpc.Future>`_.
+
+            The actual result from the RPC can be got by calling `.result()` on the
+            value returned from `method`.
         """
-        call_details.metadata.append(
-            ("authorization", "Bearer mysecrettoken")
+        new_details = ClientCallDetails(
+            call_details.method,
+            call_details.timeout,
+            [("authorization", "Bearer mysecrettoken")],
+            call_details.credentials,
+            call_details.wait_for_ready,
+            call_details.compression,
         )
 
-        return call_details, request_iterator, None
+        return method(new_details, request_or_iterator)
 ```
 
 An optional callback function can be included as the third element of the
