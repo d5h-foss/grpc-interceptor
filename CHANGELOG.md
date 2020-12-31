@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.13.0] - 2020-12-27
 ### Added
-- Client-side interceptors (thanks @villainy!)
+- Client-side interceptors (thanks Michael Morgan!)
 
 ### Changed (breaking)
 - Added a `context` parameter to special case functions in the `testing` module

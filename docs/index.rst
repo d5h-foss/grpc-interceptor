@@ -163,9 +163,9 @@ a client interceptor:
                 method: A function that proceeds with the invocation by executing the next
                     interceptor in the chain or invoking the actual RPC on the underlying
                     channel.
-                call_details: Describes an RPC to be invoked.
                 request_or_iterator: RPC request message or iterator of request messages
                     for streaming requests.
+                call_details: Describes an RPC to be invoked.
 
             Returns:
                 The type of the return should match the type of the return value received
@@ -185,7 +185,7 @@ a client interceptor:
                 call_details.compression,
             )
 
-            return method(new_details, request_or_iterator)
+            return method(request_or_iterator, new_details)
 
 Now inject your interceptor when you create the ``grpc`` channel:
 

@@ -61,9 +61,9 @@ class ClientInterceptor(
             method: A function that proceeds with the invocation by executing the next
                 interceptor in the chain or invoking the actual RPC on the underlying
                 channel.
-            call_details: Describes an RPC to be invoked.
             request_or_iterator: RPC request message or iterator of request messages
                 for streaming requests.
+            call_details: Describes an RPC to be invoked.
 
         Returns:
             The type of the return should match the type of the return value received
@@ -75,7 +75,7 @@ class ClientInterceptor(
             The actual result from the RPC can be got by calling `.result()` on the
             value returned from `method`.
         """
-        return method(call_details, request_or_iterator)  # pragma: no cover
+        return method(request_or_iterator, call_details)  # pragma: no cover
 
     def intercept_unary_unary(
         self,
@@ -88,7 +88,7 @@ class ClientInterceptor(
         This is not part of the grpc_interceptor.ClientInterceptor API, but must have
         a public name. Do not override it, unless you know what you're doing.
         """
-        return self.intercept(continuation, request, call_details)
+        return self.intercept(_swap_args(continuation), request, call_details)
 
     def intercept_unary_stream(
         self,
@@ -101,7 +101,7 @@ class ClientInterceptor(
         This is not part of the grpc_interceptor.ClientInterceptor API, but must have
         a public name. Do not override it, unless you know what you're doing.
         """
-        return self.intercept(continuation, request, call_details)
+        return self.intercept(_swap_args(continuation), request, call_details)
 
     def intercept_stream_unary(
         self,
@@ -114,7 +114,7 @@ class ClientInterceptor(
         This is not part of the grpc_interceptor.ClientInterceptor API, but must have
         a public name. Do not override it, unless you know what you're doing.
         """
-        return self.intercept(continuation, request_iterator, call_details)
+        return self.intercept(_swap_args(continuation), request_iterator, call_details)
 
     def intercept_stream_stream(
         self,
@@ -127,4 +127,10 @@ class ClientInterceptor(
         This is not part of the grpc_interceptor.ClientInterceptor API, but must have
         a public name. Do not override it, unless you know what you're doing.
         """
-        return self.intercept(continuation, request_iterator, call_details)
+        return self.intercept(_swap_args(continuation), request_iterator, call_details)
+
+
+def _swap_args(fn: Callable[[Any, Any], Any]) -> Callable[[Any, Any], Any]:
+    def new_fn(x, y):
+        return fn(y, x)
+    return new_fn

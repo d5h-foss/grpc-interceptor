@@ -20,7 +20,7 @@ class MetadataInterceptor(ClientInterceptor):
     def intercept(self, method, request_or_iterator, call_details):
         """Add invocation metadata to request."""
         new_details = call_details._replace(metadata=self._metadata)
-        return method(new_details, request_or_iterator)
+        return method(request_or_iterator, new_details)
 
 
 class CodeCountInterceptor(ClientInterceptor):
@@ -31,7 +31,7 @@ class CodeCountInterceptor(ClientInterceptor):
 
     def intercept(self, method, request_or_iterator, call_details):
         """Call continuation and count status codes."""
-        future = method(call_details, request_or_iterator)
+        future = method(request_or_iterator, call_details)
         self.counts[future.code()] += 1
         return future
 
@@ -46,7 +46,7 @@ class RetryInterceptor(ClientInterceptor):
         """Call the continuation and retry up to retries times if it fails."""
         tries_remaining = 1 + self._retries
         while 0 < tries_remaining:
-            future = method(call_details, request_or_iterator)
+            future = method(request_or_iterator, call_details)
             try:
                 future.result()
                 return future
@@ -90,7 +90,7 @@ class CachingInterceptor(ClientInterceptor):
             cache_key = request_or_iterator.input
 
         if cache_key not in self._cache:
-            self._cache[cache_key] = method(call_details, request_or_iterator)
+            self._cache[cache_key] = method(request_or_iterator, call_details)
 
         return self._cache[cache_key]
 
