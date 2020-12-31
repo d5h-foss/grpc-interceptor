@@ -29,6 +29,8 @@ $ pip install grpc-interceptor[testing]
 
 # Usage
 
+## Server Interceptor
+
 To define your own interceptor (we can use `ExceptionToStatusInterceptor` as an example):
 
 ```python
@@ -98,6 +100,73 @@ catching exceptions in your service handler, or passing the context down into
 helper functions so they can call `context.abort` or `context.set_code`. It allows
 the more Pythonic approach of just raising an exception from anywhere in the code,
 and having it be handled automatically.
+
+## Client Interceptor
+
+We will use an invocation metadata injecting interceptor as an example of defining
+a client interceptor:
+
+```python
+from grpc_interceptor import ClientCallDetails, ClientInterceptor
+
+class MetadataClientInterceptor(ClientInterceptor):
+
+    def intercept(
+        self,
+        method: Callable,
+        request_or_iterator: Any,
+        call_details: grpc.ClientCallDetails,
+    ):
+        """Override this method to implement a custom interceptor.
+
+        This method is called for all unary and streaming RPCs. The interceptor
+        implementation should call `method` using a `grpc.ClientCallDetails` and the
+        `request_or_iterator` object as parameters. The `request_or_iterator`
+        parameter may be type checked to determine if this is a singluar request
+        for unary RPCs or an iterator for client-streaming or client-server streaming
+        RPCs.
+
+        Args:
+            method: A function that proceeds with the invocation by executing the next
+                interceptor in the chain or invoking the actual RPC on the underlying
+                channel.
+            request_or_iterator: RPC request message or iterator of request messages
+                for streaming requests.
+            call_details: Describes an RPC to be invoked.
+
+        Returns:
+            The type of the return should match the type of the return value received
+            by calling `method`. This is an object that is both a
+            `Call <https://grpc.github.io/grpc/python/grpc.html#grpc.Call>`_ for the
+            RPC and a `Future <https://grpc.github.io/grpc/python/grpc.html#grpc.Future>`_.
+
+            The actual result from the RPC can be got by calling `.result()` on the
+            value returned from `method`.
+        """
+        new_details = ClientCallDetails(
+            call_details.method,
+            call_details.timeout,
+            [("authorization", "Bearer mysecrettoken")],
+            call_details.credentials,
+            call_details.wait_for_ready,
+            call_details.compression,
+        )
+
+        return method(request_or_iterator, new_details)
+```
+
+Now inject your interceptor when you create the ``grpc`` channel:
+
+```python
+interceptors = [MetadataClientInterceptor()]
+with grpc.insecure_channel("grpc-server:50051") as channel:
+    channel = grpc.intercept_channel(channel, *interceptors)
+    ...
+```
+
+Client interceptors can also be used to retry RPCs that fail due to specific errors, or
+a host of other use cases. There are some basic approaches in the tests to get you
+started.
 
 # Documentation
 

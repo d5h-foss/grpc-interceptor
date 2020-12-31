@@ -31,6 +31,8 @@ The ``grpc_interceptor`` package provides the following:
   that set the gRPC status code correctly (rather than the default of every exception
   resulting in an ``UNKNOWN`` status code). This is something for which pretty much any
   service will have a use.
+* A ``ClientInterceptor`` base class, to make it easy to define your own client-side interceptors.
+  Do not confuse this with the ``grpc.ClientInterceptor`` class.
 * An optional testing framework. If you're writing your own interceptors, this is useful.
   If you're just using ``ExceptionToStatusInterceptor`` then you don't need this.
 
@@ -52,7 +54,10 @@ To also install the testing framework:
 Usage
 -----
 
-To define your own interceptor (we can use a simplified version of
+Server Interceptors
+^^^^^^^^^^^^^^^^^^^
+
+To define your own server interceptor (we can use a simplified version of
 ``ExceptionToStatusInterceptor`` as an example):
 
 .. code-block:: python
@@ -127,6 +132,74 @@ helper functions so they can call ``context.abort`` or ``context.set_code``. It 
 the more Pythonic approach of just raising an exception from anywhere in the code,
 and having it be handled automatically.
 
+Client Interceptors
+^^^^^^^^^^^^^^^^^^^
+
+We will use an invocation metadata injecting interceptor as an example of defining
+a client interceptor:
+
+.. code-block:: python
+
+    from grpc_interceptor import ClientCallDetails, ClientInterceptor
+
+    class MetadataClientInterceptor(ClientInterceptor):
+
+        def intercept(
+            self,
+            method: Callable,
+            request_or_iterator: Any,
+            call_details: grpc.ClientCallDetails,
+        ):
+            """Override this method to implement a custom interceptor.
+
+            This method is called for all unary and streaming RPCs. The interceptor
+            implementation should call `method` using a `grpc.ClientCallDetails` and the
+            `request_or_iterator` object as parameters. The `request_or_iterator`
+            parameter may be type checked to determine if this is a singluar request
+            for unary RPCs or an iterator for client-streaming or client-server streaming
+            RPCs.
+
+            Args:
+                method: A function that proceeds with the invocation by executing the next
+                    interceptor in the chain or invoking the actual RPC on the underlying
+                    channel.
+                request_or_iterator: RPC request message or iterator of request messages
+                    for streaming requests.
+                call_details: Describes an RPC to be invoked.
+
+            Returns:
+                The type of the return should match the type of the return value received
+                by calling `method`. This is an object that is both a
+                `Call <https://grpc.github.io/grpc/python/grpc.html#grpc.Call>`_ for the
+                RPC and a `Future <https://grpc.github.io/grpc/python/grpc.html#grpc.Future>`_.
+
+                The actual result from the RPC can be got by calling `.result()` on the
+                value returned from `method`.
+            """
+            new_details = ClientCallDetails(
+                call_details.method,
+                call_details.timeout,
+                [("authorization", "Bearer mysecrettoken")],
+                call_details.credentials,
+                call_details.wait_for_ready,
+                call_details.compression,
+            )
+
+            return method(request_or_iterator, new_details)
+
+Now inject your interceptor when you create the ``grpc`` channel:
+
+.. code-block:: python
+
+    interceptors = [MetadataClientInterceptor()]
+    with grpc.insecure_channel("grpc-server:50051") as channel:
+        channel = grpc.intercept_channel(channel, *interceptors)
+        ...
+
+Client interceptors can also be used to retry RPCs that fail due to specific errors, or
+a host of other use cases. There are some basic approaches in the tests to get you
+started.
+
 Testing
 -------
 
@@ -137,10 +210,13 @@ framework, and also allows chaining interceptors.
 
 The crux of the testing framework is the ``dummy_client`` context manager. It provides
 a client to a gRPC service, which by defaults echos the ``input`` field of the request
-to the ``output`` field of the response. You can also provide a ``special_cases`` dict
-which tells the service to call arbitrary functions when the input matches a key in the
-dict. This allows you to test things like exceptions being thrown. Here's an example
-(again using ``ExceptionToStatusInterceptor``):
+to the ``output`` field of the response.
+
+You can also provide a ``special_cases`` dict which tells the service to call arbitrary
+functions when the input matches a key in the dict. This allows you to test things like
+exceptions being thrown.
+
+Here's an example (again using ``ExceptionToStatusInterceptor``):
 
 .. code-block:: python
 
@@ -162,7 +238,4 @@ dict. This allows you to test things like exceptions being thrown. Here's an exa
 Limitations
 -----------
 
-These are the current limitations, although supporting these is possible. Contributions
-or requests are welcome.
-
-* The package only provides service interceptors.
+Contributions or requests are welcome for any limitations you may find.
