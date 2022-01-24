@@ -77,6 +77,18 @@ def dummy_client(
     client_interceptors: Optional[List[ClientInterceptor]] = None,
 ):
     """A context manager that returns a gRPC client connected to a DummyService."""
+    with dummy_channel(special_cases, interceptors, client_interceptors) as channel:
+        client = dummy_pb2_grpc.DummyServiceStub(channel)
+        yield client
+
+
+@contextmanager
+def dummy_channel(
+    special_cases: Dict[str, SpecialCaseFunction],
+    interceptors: Optional[List[ServerInterceptor]] = None,
+    client_interceptors: Optional[List[ClientInterceptor]] = None,
+):
+    """A context manager that returns a gRPC channel connected to a DummyService."""
     if not interceptors:
         interceptors = []
 
@@ -100,9 +112,7 @@ def dummy_client(
     if client_interceptors:
         channel = grpc.intercept_channel(channel, *client_interceptors)
 
-    client = dummy_pb2_grpc.DummyServiceStub(channel)
-
     try:
-        yield client
+        yield channel
     finally:
         server.stop(None)
