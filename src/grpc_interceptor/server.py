@@ -47,6 +47,7 @@ class ServerInterceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
         a public name. Do not override it, unless you know what you're doing.
         """
         next_handler = continuation(handler_call_details)
+        # Returns None if the method isn't implemented.
         if next_handler is None:
             return
 
