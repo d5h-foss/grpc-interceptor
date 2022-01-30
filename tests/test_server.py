@@ -7,6 +7,7 @@ import pytest
 
 from grpc_interceptor import MethodName, parse_method_name, ServerInterceptor
 from grpc_interceptor.testing import dummy_client, DummyRequest
+from grpc_interceptor.testing.dummy_client import dummy_channel
 
 
 class CountingInterceptor(ServerInterceptor):
@@ -106,6 +107,24 @@ def test_aborting_interceptor():
             client.Execute(DummyRequest(input="test"))
         assert e.value.code() == grpc.StatusCode.ABORTED
         assert e.value.details() == "oh no"
+
+
+def test_method_not_found():
+    """Calling undefined endpoints should return Unimplemented.
+
+    Interceptors are not invoked when the RPC call is not handled.
+    """
+    intr = CountingInterceptor()
+    interceptors = [intr]
+
+    with dummy_channel(special_cases={}, interceptors=interceptors) as channel:
+        with pytest.raises(grpc.RpcError) as e:
+            channel.unary_unary(
+                "/DummyService/Unimplemented",
+            )(b'')
+        assert e.value.code() == grpc.StatusCode.UNIMPLEMENTED
+        assert len(intr.num_calls) == 0
+        assert len(intr.num_errors) == 0
 
 
 def test_method_name():
