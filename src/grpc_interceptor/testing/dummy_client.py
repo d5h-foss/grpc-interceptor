@@ -1,16 +1,18 @@
 """Defines a service and client for testing interceptors."""
 
+import asyncio
 from concurrent import futures
 from contextlib import contextmanager
 import os
 from tempfile import gettempdir
+from threading import Event, Thread
 from typing import Callable, Dict, Iterable, List, Optional
 from uuid import uuid4
 
 import grpc
 
 from grpc_interceptor.client import ClientInterceptor
-from grpc_interceptor.server import ServerInterceptor
+from grpc_interceptor.server import AsyncServerInterceptor, ServerInterceptor
 from grpc_interceptor.testing.protos import dummy_pb2_grpc
 from grpc_interceptor.testing.protos.dummy_pb2 import DummyRequest, DummyResponse
 
@@ -70,21 +72,41 @@ class DummyService(dummy_pb2_grpc.DummyServiceServicer):
         return output
 
 
+class AsyncDummyService(DummyService):
+    async def Execute(
+        self, request: DummyRequest, context: grpc.aio.ServicerContext
+    ) -> DummyResponse:
+        return DummyResponse(output=self._get_output(request, context))
+
+    async def ExecuteClientStream(
+        self, request_iter: Iterable[DummyRequest], context: grpc.aio.ServicerContext
+    ) -> DummyResponse:
+        output = "".join([self._get_output(request, context) async for request in request_iter])
+        return DummyResponse(output=output)
+
+    async def ExecuteServerStream(
+        self, request: DummyRequest, context: grpc.aio.ServicerContext
+    ) -> Iterable[DummyResponse]:
+        for c in self._get_output(request, context):
+            yield DummyResponse(output=c)
+
+    async def ExecuteClientServerStream(
+        self, request_iter: Iterable[DummyRequest], context: grpc.aio.ServicerContext
+    ) -> Iterable[DummyResponse]:
+        async for request in request_iter:
+            yield DummyResponse(output=self._get_output(request, context))
+
+
 @contextmanager
 def dummy_client(
     special_cases: Dict[str, SpecialCaseFunction],
     interceptors: Optional[List[ServerInterceptor]] = None,
     client_interceptors: Optional[List[ClientInterceptor]] = None,
+    aio_server: bool = False,
 ):
     """A context manager that returns a gRPC client connected to a DummyService."""
     if not interceptors:
         interceptors = []
-
-    server = grpc.server(
-        futures.ThreadPoolExecutor(max_workers=1), interceptors=interceptors
-    )
-    dummy_service = DummyService(special_cases)
-    dummy_pb2_grpc.add_DummyServiceServicer_to_server(dummy_service, server)
 
     if os.name == "nt":  # pragma: no cover
         # We use Unix domain sockets when they're supported, to avoid port conflicts.
@@ -93,8 +115,19 @@ def dummy_client(
     else:
         channel_descriptor = f"unix://{gettempdir()}/{uuid4()}.sock"
 
-    server.add_insecure_port(channel_descriptor)
-    server.start()
+    if aio_server:
+        aio_loop = asyncio.new_event_loop()
+        aio_thread = AsyncServerThread(aio_loop, AsyncDummyService(special_cases), channel_descriptor, interceptors)
+        aio_thread.start()
+        aio_thread.wait_for_server()
+    else:
+        dummy_service = DummyService(special_cases)
+        server = grpc.server(
+            futures.ThreadPoolExecutor(max_workers=1), interceptors=interceptors
+        )
+        dummy_pb2_grpc.add_DummyServiceServicer_to_server(dummy_service, server)
+        server.add_insecure_port(channel_descriptor)
+        server.start()
 
     channel = grpc.insecure_channel(channel_descriptor)
     if client_interceptors:
@@ -105,4 +138,40 @@ def dummy_client(
     try:
         yield client
     finally:
-        server.stop(None)
+        if aio_server:
+            aio_thread.stop()
+            aio_thread.join()
+        else:
+            server.stop(None)
+
+
+class AsyncServerThread(Thread):
+    def __init__(self, loop: asyncio.BaseEventLoop, service, channel_descriptor: str, interceptors: List[AsyncServerInterceptor]):
+        super().__init__()
+        self.__loop = loop
+        self.__service = service
+        self.__channel_descriptor = channel_descriptor
+        self.__interceptors = interceptors
+        self.__started = Event()
+
+    def run(self):
+        asyncio.set_event_loop(self.__loop)
+        self.__loop.run_until_complete(self.__run_server())
+
+    async def __run_server(self):
+        self.__server = grpc.aio.server(interceptors=tuple(self.__interceptors))
+        dummy_pb2_grpc.add_DummyServiceServicer_to_server(self.__service, self.__server)
+        self.__server.add_insecure_port(self.__channel_descriptor)
+        await self.__server.start()
+        self.__started.set()
+        await self.__server.wait_for_termination()
+
+    def wait_for_server(self):
+        self.__started.wait()
+
+    def stop(self):
+        self.__loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self.__shutdown()))
+
+    async def __shutdown(self) -> None:
+        await self.__server.stop(None)
+        self.__loop.stop()

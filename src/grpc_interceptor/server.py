@@ -60,6 +60,60 @@ class ServerInterceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
         )
 
 
+class AsyncServerInterceptor(grpc.aio.ServerInterceptor, metaclass=abc.ABCMeta):
+    """Base class for asyncio server-side interceptors.
+
+    To implement an interceptor, subclass this class and override the intercept method.
+    """
+
+    @abc.abstractmethod
+    async def intercept(
+        self,
+        method: Callable,
+        request: Any,
+        context: grpc.aio.ServicerContext,
+        method_name: str,
+    ) -> Any:
+        """Override this method to implement a custom interceptor.
+
+        You should call await method(request, context) to invoke the next handler (either the
+        RPC method implementation, or the next interceptor in the list).
+
+        Args:
+            method: Either the RPC method implementation, or the next interceptor in
+                the chain.
+            request: The RPC request, as a protobuf message.
+            context: The ServicerContext pass by gRPC to the service.
+            method_name: A string of the form "/protobuf.package.Service/Method"
+
+        Returns:
+            This should generally return the result of await method(request, context), which
+            is typically the RPC method response, as a protobuf message. The
+            interceptor is free to modify this in some way, however.
+        """
+        return await method(request, context)  # pragma: no cover
+
+    # Implementation of grpc.ServerInterceptor, do not override.
+    async def intercept_service(self, continuation, handler_call_details):
+        """Implementation of grpc.aio.ServerInterceptor.
+
+        This is not part of the grpc_interceptor.AsyncServerInterceptor API, but must have
+        a public name. Do not override it, unless you know what you're doing.
+        """
+        next_handler = await continuation(handler_call_details)
+        handler_factory, next_handler_method = _get_factory_and_method(next_handler)
+
+        async def invoke_intercept_method(request, context):
+            method_name = handler_call_details.method
+            return await self.intercept(next_handler_method, request, context, method_name,)
+
+        return handler_factory(
+            invoke_intercept_method,
+            request_deserializer=next_handler.request_deserializer,
+            response_serializer=next_handler.response_serializer,
+        )
+
+
 def _get_factory_and_method(
     rpc_handler: grpc.RpcMethodHandler,
 ) -> Tuple[Callable, Callable]:
