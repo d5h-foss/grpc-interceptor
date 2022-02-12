@@ -105,7 +105,7 @@ def dummy_client(
     aio_server: bool = False,
 ):
     """A context manager that returns a gRPC client connected to a DummyService."""
-    with dummy_channel(special_cases, interceptors, client_interceptors) as channel:
+    with dummy_channel(special_cases, interceptors, client_interceptors, aio_server) as channel:
         client = dummy_pb2_grpc.DummyServiceStub(channel)
         yield client
 
@@ -115,6 +115,7 @@ def dummy_channel(
     special_cases: Dict[str, SpecialCaseFunction],
     interceptors: Optional[List[ServerInterceptor]] = None,
     client_interceptors: Optional[List[ClientInterceptor]] = None,
+    aio_server: bool = False,
 ):
     """A context manager that returns a gRPC channel connected to a DummyService."""
     if not interceptors:
