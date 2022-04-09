@@ -1,6 +1,7 @@
 """ExceptionToStatusInterceptor catches GrpcException and sets the gRPC context."""
 
-from typing import Any, Callable, Optional
+from contextlib import contextmanager
+from typing import Any, Callable, Generator, Optional
 
 import grpc
 
@@ -31,6 +32,29 @@ class ExceptionToStatusInterceptor(ServerInterceptor):
             raise ValueError("The status code for unknown exceptions cannot be OK")
         self._status_on_unknown_exception = status_on_unknown_exception
 
+    def _generate_responses(self, context, responses):
+        """Yield all the responses, but check for errors along the way."""
+        with self._handle_exceptions(context, reraise=False):
+            yield from responses
+
+    @contextmanager
+    def _handle_exceptions(self, context, *, reraise: bool):
+        try:
+            yield
+        except GrpcException as e:
+            context.set_code(e.status_code)
+            context.set_details(e.details)
+            if reraise:
+                raise
+        except Exception as e:
+            if self._status_on_unknown_exception is not None:
+                context.set_code(self._status_on_unknown_exception)
+                context.set_details(repr(e))
+                if reraise:
+                    raise
+            else:
+                raise
+
     def intercept(
         self,
         method: Callable,
@@ -39,14 +63,12 @@ class ExceptionToStatusInterceptor(ServerInterceptor):
         method_name: str,
     ) -> Any:
         """Do not call this directly; use the interceptor kwarg on grpc.server()."""
-        try:
-            return method(request, context)
-        except GrpcException as e:
-            context.set_code(e.status_code)
-            context.set_details(e.details)
-            raise
-        except Exception as e:
-            if self._status_on_unknown_exception is not None:
-                context.set_code(self._status_on_unknown_exception)
-                context.set_details(repr(e))
-            raise
+        with self._handle_exceptions(context, reraise=True):
+            responses = method(request, context)
+
+        if isinstance(responses, Generator):
+            # multiple responses; return a generator
+            return self._generate_responses(context, responses)
+        else:
+            # return a single response
+            return responses

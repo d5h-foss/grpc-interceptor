@@ -29,7 +29,8 @@ class DummyService(dummy_pb2_grpc.DummyServiceServicer):
     """
 
     def __init__(
-        self, special_cases: Dict[str, SpecialCaseFunction],
+        self,
+        special_cases: Dict[str, SpecialCaseFunction],
     ):
         self._special_cases = special_cases
 

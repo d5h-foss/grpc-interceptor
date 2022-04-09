@@ -118,6 +118,18 @@ def test_all_exceptions(interceptors):
     assert len(seen_details) == len(all_status_codes)
 
 
+def test_exception_in_streaming_response(interceptors):
+    """Exceptions are raised correctly from streaming responses."""
+    with dummy_client(
+        special_cases={"error": raises(gx.NotFound("not found!"))},
+        interceptors=interceptors,
+    ) as client:
+        with pytest.raises(grpc.RpcError) as e:
+            list(client.ExecuteServerStream(DummyRequest(input="error")))
+        assert e.value.code() == grpc.StatusCode.NOT_FOUND
+        assert e.value.details() == "not found!"
+
+
 def _snake_to_camel(s: str) -> str:
     return "".join([p.title() for p in s.split("_")])
 
