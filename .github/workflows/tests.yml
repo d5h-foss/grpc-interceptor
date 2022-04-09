@@ -3,12 +3,17 @@ on: [push, pull_request]
 jobs:
     tests:
         strategy:
+            fail-fast: false
             matrix:
                 platform: [ubuntu-latest, macos-latest, windows-latest]
-                python-version: ['3.6', '3.9']
-                exclude:
-                - platform: macos-latest
+                python-version: ['3.9']
+                include:  # Oldest versions >=3.6 that are available for each platform
+                - platform: ubuntu-latest
                   python-version: 3.6
+                - platform: macos-latest
+                  python-version: 3.7
+                - platform: windows-latest
+                  python-version: 3.7
         name: Python ${{matrix.python-version}} ${{matrix.platform}}
         runs-on: ${{matrix.platform}}
         steps:
