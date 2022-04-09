@@ -120,7 +120,6 @@ def test_all_exceptions(interceptors):
 
 def test_exception_in_streaming_response(interceptors):
     """Exceptions are raised correctly from streaming responses."""
-
     with dummy_client(
         special_cases={"error": raises(gx.NotFound("not found!"))},
         interceptors=interceptors,

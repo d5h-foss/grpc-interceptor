@@ -33,7 +33,7 @@ class ExceptionToStatusInterceptor(ServerInterceptor):
         self._status_on_unknown_exception = status_on_unknown_exception
 
     def _generate_responses(self, context, responses):
-        """Yield all the responses, but check for errors along the way"""
+        """Yield all the responses, but check for errors along the way."""
         with self._handle_exceptions(context, reraise=False):
             yield from responses
 
