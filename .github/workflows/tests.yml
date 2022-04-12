@@ -14,6 +14,9 @@ jobs:
           with:
               python-version: ${{matrix.python-version}}
               architecture: x64
+        - run: echo "$TEST"
+          env:
+            CODECOV_TOKEN: ${{secrets.TEST}}
         - run: pip install nox==2020.5.24
         - run: pip install poetry==1.0.9
         - run: nox
