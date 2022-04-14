@@ -16,10 +16,10 @@ class ServerInterceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
     def intercept(
         self,
         method: Callable,
-        request: Any,
+        request_or_iterator: Any,
         context: grpc.ServicerContext,
         method_name: str,
-    ) -> Any:
+    ) -> Any:  # pragma: no cover
         """Override this method to implement a custom interceptor.
 
         You should call method(request, context) to invoke the next handler (either the
@@ -28,7 +28,9 @@ class ServerInterceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
         Args:
             method: Either the RPC method implementation, or the next interceptor in
                 the chain.
-            request: The RPC request, as a protobuf message.
+            request_or_iterator: The RPC request, as a protobuf message if it is a
+                unary request, or an iterator of protobuf messages if it is a streaming
+                request.
             context: The ServicerContext pass by gRPC to the service.
             method_name: A string of the form "/protobuf.package.Service/Method"
 
@@ -37,7 +39,11 @@ class ServerInterceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
             is typically the RPC method response, as a protobuf message. The
             interceptor is free to modify this in some way, however.
         """
-        return method(request, context)  # pragma: no cover
+
+        # request_or_iterator will be a protobuf message for unary responses, or an
+        # iterator of protobuf messages for streaming responses
+        response_or_iterator = method(request_or_iterator, context)
+        return response_or_iterator
 
     # Implementation of grpc.ServerInterceptor, do not override.
     def intercept_service(self, continuation, handler_call_details):
@@ -53,9 +59,11 @@ class ServerInterceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
 
         handler_factory, next_handler_method = _get_factory_and_method(next_handler)
 
-        def invoke_intercept_method(request, context):
+        def invoke_intercept_method(request_or_iterator, context):
             method_name = handler_call_details.method
-            return self.intercept(next_handler_method, request, context, method_name,)
+            return self.intercept(
+                next_handler_method, request_or_iterator, context, method_name,
+            )
 
         return handler_factory(
             invoke_intercept_method,

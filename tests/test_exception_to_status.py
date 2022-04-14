@@ -1,5 +1,4 @@
 """Test cases for ExceptionToStatusInterceptor."""
-
 import re
 
 import grpc
@@ -10,10 +9,31 @@ from grpc_interceptor.exception_to_status import ExceptionToStatusInterceptor
 from grpc_interceptor.testing import dummy_client, DummyRequest, raises
 
 
+class MyDataLossException(Exception):
+    """A custom data loss exception."""
+
+    pass
+
+
+class MyExceptionToStatusInterceptor(ExceptionToStatusInterceptor):
+    """My Exception To Status Interceptor."""
+
+    def handle_exception(self, ex, request_or_iterator, context, method_name):
+        """Override this if extending ExceptionToStatusInterceptor.
+
+        E.g., you can catch and handle exceptions that don't derive from GrpcException.
+        Or you can set rich error statuses with context.abort_with_status(...).
+        """
+        if isinstance(ex, MyDataLossException):
+            context.abort(grpc.StatusCode.DATA_LOSS, "There was data loss")
+        else:
+            super().handle_exception(ex, request_or_iterator, context, method_name)
+
+
 @pytest.fixture
 def interceptors():
     """The interceptor chain for this test suite."""
-    return [ExceptionToStatusInterceptor()]
+    return [MyExceptionToStatusInterceptor()]
 
 
 def test_repr():
@@ -58,6 +78,19 @@ def test_custom_details(interceptors):
             client.Execute(DummyRequest(input="error"))
         assert e.value.code() == grpc.StatusCode.NOT_FOUND
         assert e.value.details() == "custom"
+
+
+def test_custom_mapper(interceptors):
+    """We can use custom mappers."""
+    special_cases = {"error": raises(MyDataLossException())}
+    with dummy_client(special_cases=special_cases, interceptors=interceptors) as client:
+        assert (
+            client.Execute(DummyRequest(input="foo")).output == "foo"
+        )  # Test a happy path too
+        with pytest.raises(grpc.RpcError) as e:
+            client.Execute(DummyRequest(input="error"))
+        assert e.value.code() == grpc.StatusCode.DATA_LOSS
+        assert e.value.details() == "There was data loss"
 
 
 def test_non_grpc_exception(interceptors):
