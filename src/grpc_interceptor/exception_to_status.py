@@ -13,7 +13,10 @@ class ExceptionToStatusInterceptor(ServerInterceptor):
     """An interceptor that catches exceptions and sets the RPC status and details.
 
     ExceptionToStatusInterceptor will catch any subclass of GrpcException and set the
-    status code and details on the gRPC context.
+    status code and details on the gRPC context. You can also extend this and override
+    the handle_exception method to catch other types of exceptions, and handle them in
+    different ways. E.g., you can catch and handle exceptions that don't derive from
+    GrpcException. Or you can set rich error statuses with context.abort_with_status().
 
     Args:
         status_on_unknown_exception: Specify what to do if an exception which is
@@ -38,7 +41,7 @@ class ExceptionToStatusInterceptor(ServerInterceptor):
         request_or_iterator: Any,
         context: grpc.ServicerContext,
         method_name: str,
-        response_iterator,
+        response_iterator: Iterable,
     ) -> Generator[Any, None, None]:
         """Yield all the responses, but check for errors along the way."""
         with self._handle_exception(request_or_iterator, context, method_name):
@@ -62,8 +65,20 @@ class ExceptionToStatusInterceptor(ServerInterceptor):
     ) -> NoReturn:
         """Override this if extending ExceptionToStatusInterceptor.
 
-        E.g., you can catch and handle exceptions that don't derive from GrpcException.
-        Or you can set rich error statuses with context.abort_with_status(...).
+        This will get called when an exception is raised while handling the RPC.
+
+        Args:
+            ex: The exception that was raised.
+            request_or_iterator: The RPC request, as a protobuf message if it is a
+                unary request, or an iterator of protobuf messages if it is a streaming
+                request.
+            context: The servicer context. You probably want to call context.abort(...)
+            method_name: The name of the RPC being called.
+
+        Raises:
+            This method must raise and cannot return, as in general there's no
+            meaningful RPC response to return if an exception has occurred. You can
+            raise the original exception, ex, or something else.
         """
         if isinstance(ex, GrpcException):
             context.abort(ex.status_code, ex.details)

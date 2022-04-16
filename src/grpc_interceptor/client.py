@@ -26,6 +26,7 @@ class ClientCallDetails(_ClientCallDetailsFields, grpc.ClientCallDetails):
 
 class ClientInterceptorReturnType(grpc.Call, grpc.Future):
     """Return type for the ClientInterceptor.intercept method."""
+
     pass
 
 
@@ -133,4 +134,5 @@ class ClientInterceptor(
 def _swap_args(fn: Callable[[Any, Any], Any]) -> Callable[[Any, Any], Any]:
     def new_fn(x, y):
         return fn(y, x)
+
     return new_fn

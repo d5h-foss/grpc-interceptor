@@ -9,31 +9,34 @@ from grpc_interceptor.exception_to_status import ExceptionToStatusInterceptor
 from grpc_interceptor.testing import dummy_client, DummyRequest, raises
 
 
-class MyDataLossException(Exception):
-    """A custom data loss exception."""
+class NonGrpcException(Exception):
+    """An exception that does not derive from GrpcException."""
 
-    pass
+    TEST_STATUS_CODE = grpc.StatusCode.DATA_LOSS
+    TEST_DETAILS = "Here's some custom details"
 
 
-class MyExceptionToStatusInterceptor(ExceptionToStatusInterceptor):
-    """My Exception To Status Interceptor."""
+class ExtendedExceptionToStatusInterceptor(ExceptionToStatusInterceptor):
+    """A test case for extending ExceptionToStatusInterceptor."""
+
+    def __init__(self):
+        self.caught_custom_exception = False
 
     def handle_exception(self, ex, request_or_iterator, context, method_name):
-        """Override this if extending ExceptionToStatusInterceptor.
-
-        E.g., you can catch and handle exceptions that don't derive from GrpcException.
-        Or you can set rich error statuses with context.abort_with_status(...).
-        """
-        if isinstance(ex, MyDataLossException):
-            context.abort(grpc.StatusCode.DATA_LOSS, "There was data loss")
+        """Handles NonGrpcException in a special way."""
+        if isinstance(ex, NonGrpcException):
+            self.caught_custom_exception = True
+            context.abort(
+                NonGrpcException.TEST_STATUS_CODE, NonGrpcException.TEST_DETAILS
+            )
         else:
             super().handle_exception(ex, request_or_iterator, context, method_name)
 
 
 @pytest.fixture
 def interceptors():
-    """The interceptor chain for this test suite."""
-    return [MyExceptionToStatusInterceptor()]
+    """The interceptor chain for the majority of this test suite."""
+    return [ExceptionToStatusInterceptor()]
 
 
 def test_repr():
@@ -78,19 +81,6 @@ def test_custom_details(interceptors):
             client.Execute(DummyRequest(input="error"))
         assert e.value.code() == grpc.StatusCode.NOT_FOUND
         assert e.value.details() == "custom"
-
-
-def test_custom_mapper(interceptors):
-    """We can use custom mappers."""
-    special_cases = {"error": raises(MyDataLossException())}
-    with dummy_client(special_cases=special_cases, interceptors=interceptors) as client:
-        assert (
-            client.Execute(DummyRequest(input="foo")).output == "foo"
-        )  # Test a happy path too
-        with pytest.raises(grpc.RpcError) as e:
-            client.Execute(DummyRequest(input="error"))
-        assert e.value.code() == grpc.StatusCode.DATA_LOSS
-        assert e.value.details() == "There was data loss"
 
 
 def test_non_grpc_exception(interceptors):
@@ -171,3 +161,21 @@ def test_not_ok():
     """We cannot create a GrpcException with an OK status code."""
     with pytest.raises(ValueError):
         gx.GrpcException(status_code=grpc.StatusCode.OK)
+
+
+def test_extending():
+    """We can extend ExceptionToStatusInterceptor."""
+    interceptor = ExtendedExceptionToStatusInterceptor()
+    special_cases = {"error": raises(NonGrpcException())}
+    with dummy_client(
+        special_cases=special_cases, interceptors=[interceptor]
+    ) as client:
+        assert (
+            client.Execute(DummyRequest(input="foo")).output == "foo"
+        )  # Test a happy path too
+        assert not interceptor.caught_custom_exception
+        with pytest.raises(grpc.RpcError) as e:
+            client.Execute(DummyRequest(input="error"))
+        assert e.value.code() == NonGrpcException.TEST_STATUS_CODE
+        assert e.value.details() == NonGrpcException.TEST_DETAILS
+        assert interceptor.caught_custom_exception

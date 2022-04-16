@@ -36,14 +36,11 @@ class ServerInterceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
 
         Returns:
             This should generally return the result of method(request, context), which
-            is typically the RPC method response, as a protobuf message. The
-            interceptor is free to modify this in some way, however.
+            is typically the RPC method response, as a protobuf message, or an
+            iterator of protobuf messages for streaming responses. The interceptor is
+            free to modify this in some way, however.
         """
-
-        # request_or_iterator will be a protobuf message for unary responses, or an
-        # iterator of protobuf messages for streaming responses
-        response_or_iterator = method(request_or_iterator, context)
-        return response_or_iterator
+        return method(request_or_iterator, context)
 
     # Implementation of grpc.ServerInterceptor, do not override.
     def intercept_service(self, continuation, handler_call_details):
