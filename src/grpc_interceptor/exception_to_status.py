@@ -1,7 +1,7 @@
 """ExceptionToStatusInterceptor catches GrpcException and sets the gRPC context."""
 
 from contextlib import contextmanager
-from typing import Any, Callable, Generator, Optional
+from typing import Any, Callable, Generator, Iterable, Iterator, NoReturn, Optional
 
 import grpc
 
@@ -13,7 +13,10 @@ class ExceptionToStatusInterceptor(ServerInterceptor):
     """An interceptor that catches exceptions and sets the RPC status and details.
 
     ExceptionToStatusInterceptor will catch any subclass of GrpcException and set the
-    status code and details on the gRPC context.
+    status code and details on the gRPC context. You can also extend this and override
+    the handle_exception method to catch other types of exceptions, and handle them in
+    different ways. E.g., you can catch and handle exceptions that don't derive from
+    GrpcException. Or you can set rich error statuses with context.abort_with_status().
 
     Args:
         status_on_unknown_exception: Specify what to do if an exception which is
@@ -30,45 +33,76 @@ class ExceptionToStatusInterceptor(ServerInterceptor):
     def __init__(self, status_on_unknown_exception: Optional[grpc.StatusCode] = None):
         if status_on_unknown_exception == grpc.StatusCode.OK:
             raise ValueError("The status code for unknown exceptions cannot be OK")
+
         self._status_on_unknown_exception = status_on_unknown_exception
 
-    def _generate_responses(self, context, responses):
+    def _generate_responses(
+        self,
+        request_or_iterator: Any,
+        context: grpc.ServicerContext,
+        method_name: str,
+        response_iterator: Iterable,
+    ) -> Generator[Any, None, None]:
         """Yield all the responses, but check for errors along the way."""
-        with self._handle_exceptions(context, reraise=False):
-            yield from responses
+        with self._handle_exception(request_or_iterator, context, method_name):
+            yield from response_iterator
 
     @contextmanager
-    def _handle_exceptions(self, context, *, reraise: bool):
+    def _handle_exception(
+        self, request_or_iterator: Any, context: grpc.ServicerContext, method_name: str
+    ) -> Iterator[None]:
         try:
             yield
-        except GrpcException as e:
-            context.set_code(e.status_code)
-            context.set_details(e.details)
-            if reraise:
-                raise
-        except Exception as e:
+        except Exception as ex:
+            self.handle_exception(ex, request_or_iterator, context, method_name)
+
+    def handle_exception(
+        self,
+        ex: Exception,
+        request_or_iterator: Any,
+        context: grpc.ServicerContext,
+        method_name: str,
+    ) -> NoReturn:
+        """Override this if extending ExceptionToStatusInterceptor.
+
+        This will get called when an exception is raised while handling the RPC.
+
+        Args:
+            ex: The exception that was raised.
+            request_or_iterator: The RPC request, as a protobuf message if it is a
+                unary request, or an iterator of protobuf messages if it is a streaming
+                request.
+            context: The servicer context. You probably want to call context.abort(...)
+            method_name: The name of the RPC being called.
+
+        Raises:
+            This method must raise and cannot return, as in general there's no
+            meaningful RPC response to return if an exception has occurred. You can
+            raise the original exception, ex, or something else.
+        """
+        if isinstance(ex, GrpcException):
+            context.abort(ex.status_code, ex.details)
+        else:
             if self._status_on_unknown_exception is not None:
-                context.set_code(self._status_on_unknown_exception)
-                context.set_details(repr(e))
-                if reraise:
-                    raise
-            else:
-                raise
+                context.abort(self._status_on_unknown_exception, repr(ex))
+        raise ex
 
     def intercept(
         self,
         method: Callable,
-        request: Any,
+        request_or_iterator: Any,
         context: grpc.ServicerContext,
         method_name: str,
     ) -> Any:
         """Do not call this directly; use the interceptor kwarg on grpc.server()."""
-        with self._handle_exceptions(context, reraise=True):
-            responses = method(request, context)
+        with self._handle_exception(request_or_iterator, context, method_name):
+            response_or_iterator = method(request_or_iterator, context)
 
-        if isinstance(responses, Generator):
+        if isinstance(response_or_iterator, Iterable):
             # multiple responses; return a generator
-            return self._generate_responses(context, responses)
+            return self._generate_responses(
+                request_or_iterator, context, method_name, response_or_iterator
+            )
         else:
             # return a single response
-            return responses
+            return response_or_iterator
