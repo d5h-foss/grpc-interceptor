@@ -104,6 +104,13 @@ class MethodName:
         self.service = service
         self.method = method
 
+    def __repr__(self) -> str:
+        """Object-like representation."""
+        return (
+            f"MethodName(package='{self.package}', service='{self.service}',"
+            f" method='{self.method}')"
+        )
+
     @property
     def fully_qualified_service(self):
         """Return the service name prefixed with the package.
