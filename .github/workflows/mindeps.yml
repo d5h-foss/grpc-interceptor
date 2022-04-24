@@ -1,15 +1,13 @@
-name: Coverage
+name: Minimum Dependencies
 on: [push, pull_request]
 jobs:
-    coverage:
+    mindeps:
         runs-on: ubuntu-latest
         steps:
         - uses: actions/checkout@v2
         - uses: actions/setup-python@v1
           with:
-              python-version: '3.8'
+              python-version: '3.6'
               architecture: x64
         - run: pip install nox==2020.5.24 toml==0.10.2 poetry==1.0.9
-        - run: nox --sessions tests-3.8 coverage
-          env:
-              CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
+        - run: nox --sessions mindeps

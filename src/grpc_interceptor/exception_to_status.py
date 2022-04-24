@@ -1,7 +1,7 @@
 """ExceptionToStatusInterceptor catches GrpcException and sets the gRPC context."""
 
 from contextlib import contextmanager
-from typing import Any, Callable, Generator, Iterable, Iterator, NoReturn, Optional
+from typing import Any, Callable, Generator, Iterable, Iterator, Optional
 
 import grpc
 
@@ -62,7 +62,7 @@ class ExceptionToStatusInterceptor(ServerInterceptor):
         request_or_iterator: Any,
         context: grpc.ServicerContext,
         method_name: str,
-    ) -> NoReturn:
+    ) -> None:
         """Override this if extending ExceptionToStatusInterceptor.
 
         This will get called when an exception is raised while handling the RPC.
