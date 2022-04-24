@@ -12,7 +12,7 @@ class _ClientCallDetailsFields(NamedTuple):
     metadata: Optional[Sequence[Tuple[str, Union[str, bytes]]]]
     credentials: Optional[grpc.CallCredentials]
     wait_for_ready: Optional[bool]
-    compression: Optional[grpc.Compression]
+    compression: Any  # Type added in grpcio 1.23.0
 
 
 class ClientCallDetails(_ClientCallDetailsFields, grpc.ClientCallDetails):

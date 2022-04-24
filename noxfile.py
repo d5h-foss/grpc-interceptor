@@ -3,9 +3,11 @@
 from contextlib import contextmanager
 from pathlib import Path
 import tempfile
+from typing import List
 from uuid import uuid4
 
 import nox
+import toml
 
 
 nox.options.sessions = "lint", "mypy", "safety", "tests", "xdoctest"
@@ -98,6 +100,14 @@ def safety(session):
         session.run("safety", "check", f"--file={requirements}", "--full-report")
 
 
+@nox.session(python="3.6")
+def mindeps(session):
+    """Run test with minimum versions of dependencies."""
+    deps = _parse_minimum_dependency_versions()
+    session.install(*deps)
+    session.run("pytest", env={"PYTHONPATH": "src"})
+
+
 def install_with_constraints(session, *args, **kwargs):
     """Install packages constrained by Poetry's lock file."""
     with _temp_file() as requirements:
@@ -124,3 +134,29 @@ def _temp_file():
             path.unlink()
         except FileNotFoundError:
             pass
+
+
+def _parse_minimum_dependency_versions() -> List[str]:
+    pyproj = toml.load("pyproject.toml")
+    dependencies = pyproj["tool"]["poetry"]["dependencies"]
+    dev_dependencies = pyproj["tool"]["poetry"]["dev-dependencies"]
+    min_deps = []
+
+    for deps in (dependencies, dev_dependencies):
+        for dep, constraint in deps.items():
+            if dep == "python":
+                continue
+
+            if not isinstance(constraint, str):
+                constraint = constraint["version"]
+
+            if constraint.startswith("^") or constraint.startswith("~"):
+                version = constraint[1:]
+            elif constraint.startswith(">="):
+                version = constraint[2:]
+            else:
+                version = constraint
+
+            min_deps.append(f"{dep}=={version}")
+
+    return min_deps

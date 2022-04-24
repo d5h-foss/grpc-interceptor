@@ -1,7 +1,7 @@
 """Base class for server-side interceptors."""
 
 import abc
-from typing import Any, Callable, NamedTuple, Tuple
+from typing import Any, Callable, Tuple
 
 import grpc
 
@@ -84,7 +84,7 @@ def _get_factory_and_method(
         raise RuntimeError("RPC handler implementation does not exist")
 
 
-class MethodName(NamedTuple):
+class MethodName:
     """Represents a gRPC method name.
 
     gRPC methods are defined by three parts, represented by the three attributes.
@@ -99,9 +99,17 @@ class MethodName(NamedTuple):
         method: This is the method name. (e.g., `rpc Search(...) returns (...);`).
     """
 
-    package: str
-    service: str
-    method: str
+    def __init__(self, package: str, service: str, method: str):
+        self.package = package
+        self.service = service
+        self.method = method
+
+    def __repr__(self) -> str:
+        """Object-like representation."""
+        return (
+            f"MethodName(package='{self.package}', service='{self.service}',"
+            f" method='{self.method}')"
+        )
 
     @property
     def fully_qualified_service(self):
