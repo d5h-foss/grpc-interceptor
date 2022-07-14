@@ -1,5 +1,4 @@
 """Test cases for ExceptionToStatusInterceptor."""
-
 import re
 
 import grpc
@@ -10,9 +9,33 @@ from grpc_interceptor.exception_to_status import ExceptionToStatusInterceptor
 from grpc_interceptor.testing import dummy_client, DummyRequest, raises
 
 
+class NonGrpcException(Exception):
+    """An exception that does not derive from GrpcException."""
+
+    TEST_STATUS_CODE = grpc.StatusCode.DATA_LOSS
+    TEST_DETAILS = "Here's some custom details"
+
+
+class ExtendedExceptionToStatusInterceptor(ExceptionToStatusInterceptor):
+    """A test case for extending ExceptionToStatusInterceptor."""
+
+    def __init__(self):
+        self.caught_custom_exception = False
+
+    def handle_exception(self, ex, request_or_iterator, context, method_name):
+        """Handles NonGrpcException in a special way."""
+        if isinstance(ex, NonGrpcException):
+            self.caught_custom_exception = True
+            context.abort(
+                NonGrpcException.TEST_STATUS_CODE, NonGrpcException.TEST_DETAILS
+            )
+        else:
+            super().handle_exception(ex, request_or_iterator, context, method_name)
+
+
 @pytest.fixture
 def interceptors():
-    """The interceptor chain for this test suite."""
+    """The interceptor chain for the majority of this test suite."""
     return [ExceptionToStatusInterceptor()]
 
 
@@ -118,6 +141,18 @@ def test_all_exceptions(interceptors):
     assert len(seen_details) == len(all_status_codes)
 
 
+def test_exception_in_streaming_response(interceptors):
+    """Exceptions are raised correctly from streaming responses."""
+    with dummy_client(
+        special_cases={"error": raises(gx.NotFound("not found!"))},
+        interceptors=interceptors,
+    ) as client:
+        with pytest.raises(grpc.RpcError) as e:
+            list(client.ExecuteServerStream(DummyRequest(input="error")))
+        assert e.value.code() == grpc.StatusCode.NOT_FOUND
+        assert e.value.details() == "not found!"
+
+
 def _snake_to_camel(s: str) -> str:
     return "".join([p.title() for p in s.split("_")])
 
@@ -126,3 +161,21 @@ def test_not_ok():
     """We cannot create a GrpcException with an OK status code."""
     with pytest.raises(ValueError):
         gx.GrpcException(status_code=grpc.StatusCode.OK)
+
+
+def test_extending():
+    """We can extend ExceptionToStatusInterceptor."""
+    interceptor = ExtendedExceptionToStatusInterceptor()
+    special_cases = {"error": raises(NonGrpcException())}
+    with dummy_client(
+        special_cases=special_cases, interceptors=[interceptor]
+    ) as client:
+        assert (
+            client.Execute(DummyRequest(input="foo")).output == "foo"
+        )  # Test a happy path too
+        assert not interceptor.caught_custom_exception
+        with pytest.raises(grpc.RpcError) as e:
+            client.Execute(DummyRequest(input="error"))
+        assert e.value.code() == NonGrpcException.TEST_STATUS_CODE
+        assert e.value.details() == NonGrpcException.TEST_DETAILS
+        assert interceptor.caught_custom_exception

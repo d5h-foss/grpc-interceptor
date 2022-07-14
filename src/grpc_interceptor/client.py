@@ -12,7 +12,7 @@ class _ClientCallDetailsFields(NamedTuple):
     metadata: Optional[Sequence[Tuple[str, Union[str, bytes]]]]
     credentials: Optional[grpc.CallCredentials]
     wait_for_ready: Optional[bool]
-    compression: Optional[grpc.Compression]
+    compression: Any  # Type added in grpcio 1.23.0
 
 
 class ClientCallDetails(_ClientCallDetailsFields, grpc.ClientCallDetails):
@@ -26,6 +26,7 @@ class ClientCallDetails(_ClientCallDetailsFields, grpc.ClientCallDetails):
 
 class ClientInterceptorReturnType(grpc.Call, grpc.Future):
     """Return type for the ClientInterceptor.intercept method."""
+
     pass
 
 
@@ -133,4 +134,5 @@ class ClientInterceptor(
 def _swap_args(fn: Callable[[Any, Any], Any]) -> Callable[[Any, Any], Any]:
     def new_fn(x, y):
         return fn(y, x)
+
     return new_fn
