@@ -27,6 +27,32 @@ class AsyncStreamingInterceptor(AsyncServerInterceptor):
             return await response_or_iterator
 
 
+class ServerStreamingLoggingInterceptor(ServerInterceptor):
+    """A test interceptor that logs a stream of server responses."""
+
+    def __init__(self):
+        self._logs = []
+
+    def intercept(self, method, request, context, method_name):
+        """Doesn't do anything; just make sure we handle streaming RPCs."""
+        for resp in method(request, context):
+            self._logs.append(resp.output)
+            yield resp
+
+
+class AsyncServerStreamingLoggingInterceptor(AsyncServerInterceptor):
+    """A test interceptor that logs a stream of server responses."""
+
+    def __init__(self):
+        self._logs = []
+
+    async def intercept(self, method, request, context, method_name):
+        """Log each response object and re-yield."""
+        async for resp in method(request, context):
+            self._logs.append(resp.output)
+            yield resp
+
+
 @pytest.mark.parametrize("aio", [False, True])
 def test_client_streaming(aio):
     """Client streaming should work."""
@@ -66,3 +92,16 @@ def test_client_server_streaming(aio):
         input_iter = (DummyRequest(input=input) for input in inputs)
         response = client.ExecuteClientServerStream(input_iter)
         assert [r.output for r in response] == inputs
+
+
+@pytest.mark.parametrize("aio", [False, True])
+def test_interceptor_iterates_server_streaming(aio):
+    """The iterator should be able to iterate over streamed server responses."""
+    intr = AsyncServerStreamingLoggingInterceptor() if aio else ServerStreamingLoggingInterceptor()
+    interceptors = [intr]
+    with dummy_client(special_cases={}, interceptors=interceptors, aio_server=aio) as client:
+        output = [
+            r.output for r in client.ExecuteServerStream(DummyRequest(input="foo"))
+        ]
+        assert output == ["f", "o", "o"]
+        assert intr._logs == ["f", "o", "o"]
