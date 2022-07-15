@@ -112,9 +112,16 @@ class AsyncServerInterceptor(grpc.aio.ServerInterceptor, metaclass=abc.ABCMeta):
         next_handler = await continuation(handler_call_details)
         handler_factory, next_handler_method = _get_factory_and_method(next_handler)
 
-        async def invoke_intercept_method(request, context):
-            method_name = handler_call_details.method
-            return await self.intercept(next_handler_method, request, context, method_name,)
+        if next_handler.response_streaming:
+            async def invoke_intercept_method(request, context):
+                method_name = handler_call_details.method
+                iterator = await self.intercept(next_handler_method, request, context, method_name,)
+                async for r in iterator:
+                    yield r
+        else:
+            async def invoke_intercept_method(request, context):
+                method_name = handler_call_details.method
+                return await self.intercept(next_handler_method, request, context, method_name,)
 
         return handler_factory(
             invoke_intercept_method,

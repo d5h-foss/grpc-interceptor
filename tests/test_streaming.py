@@ -20,12 +20,11 @@ class AsyncStreamingInterceptor(AsyncServerInterceptor):
 
     async def intercept(self, method, request, context, method_name):
         """Doesn't do anything; just make sure we handle streaming RPCs."""
-        res = method(request, context)
-        if hasattr(res, "__aiter__"):
-            async for r in res:
-                yield r
+        response_or_iterator = method(request, context)
+        if hasattr(response_or_iterator, "__aiter__"):
+            return response_or_iterator
         else:
-            yield res
+            return await response_or_iterator
 
 
 @pytest.mark.parametrize("aio", [False, True])
