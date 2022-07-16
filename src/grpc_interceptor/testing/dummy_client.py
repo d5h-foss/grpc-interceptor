@@ -6,20 +6,41 @@ from contextlib import contextmanager
 import os
 from tempfile import gettempdir
 from threading import Event, Thread
-from typing import Callable, Dict, Iterable, List, Optional
+from typing import (
+    AsyncGenerator,
+    AsyncIterable,
+    Callable,
+    Dict,
+    Iterable,
+    List,
+    Optional,
+)
 from uuid import uuid4
 
 import grpc
 
 from grpc_interceptor.client import ClientInterceptor
-from grpc_interceptor.server import AsyncServerInterceptor, ServerInterceptor
+from grpc_interceptor.server import AsyncServerInterceptor, grpc_aio, ServerInterceptor
 from grpc_interceptor.testing.protos import dummy_pb2_grpc
 from grpc_interceptor.testing.protos.dummy_pb2 import DummyRequest, DummyResponse
 
 SpecialCaseFunction = Callable[[str, grpc.ServicerContext], str]
 
 
-class DummyService(dummy_pb2_grpc.DummyServiceServicer):
+class _SpecialCaseMixin:
+    _special_cases: Dict[str, SpecialCaseFunction]
+
+    def _get_output(self, request: DummyRequest, context: grpc.ServicerContext) -> str:
+        input = request.input
+
+        output = input
+        if input in self._special_cases:
+            output = self._special_cases[input](input, context)
+
+        return output
+
+
+class DummyService(dummy_pb2_grpc.DummyServiceServicer, _SpecialCaseMixin):
     """A gRPC service used for testing.
 
     Args:
@@ -62,37 +83,48 @@ class DummyService(dummy_pb2_grpc.DummyServiceServicer):
         for request in request_iter:
             yield DummyResponse(output=self._get_output(request, context))
 
-    def _get_output(self, request: DummyRequest, context: grpc.ServicerContext) -> str:
-        input = request.input
 
-        output = input
-        if input in self._special_cases:
-            output = self._special_cases[input](input, context)
+class AsyncDummyService(dummy_pb2_grpc.DummyServiceServicer, _SpecialCaseMixin):
+    """A gRPC service used for testing, similar to DummyService except async.
 
-        return output
+    See DummyService for more info.
+    """
 
+    def __init__(
+        self, special_cases: Dict[str, SpecialCaseFunction],
+    ):
+        self._special_cases = special_cases
 
-class AsyncDummyService(DummyService):
     async def Execute(
-        self, request: DummyRequest, context: grpc.aio.ServicerContext
+        self, request: DummyRequest, context: grpc_aio.ServicerContext
     ) -> DummyResponse:
+        """Echo the input, or take on of the special cases actions."""
         return DummyResponse(output=self._get_output(request, context))
 
     async def ExecuteClientStream(
-        self, request_iter: Iterable[DummyRequest], context: grpc.aio.ServicerContext
+        self,
+        request_iter: AsyncIterable[DummyRequest],
+        context: grpc_aio.ServicerContext,
     ) -> DummyResponse:
-        output = "".join([self._get_output(request, context) async for request in request_iter])
+        """Iterate over the input and concatenates the strings into the output."""
+        output = "".join(
+            [self._get_output(request, context) async for request in request_iter]
+        )
         return DummyResponse(output=output)
 
     async def ExecuteServerStream(
-        self, request: DummyRequest, context: grpc.aio.ServicerContext
-    ) -> Iterable[DummyResponse]:
+        self, request: DummyRequest, context: grpc_aio.ServicerContext
+    ) -> AsyncGenerator[DummyResponse, None]:
+        """Stream one character at a time from the input."""
         for c in self._get_output(request, context):
             yield DummyResponse(output=c)
 
     async def ExecuteClientServerStream(
-        self, request_iter: Iterable[DummyRequest], context: grpc.aio.ServicerContext
-    ) -> Iterable[DummyResponse]:
+        self,
+        request_iter: AsyncIterable[DummyRequest],
+        context: grpc_aio.ServicerContext,
+    ) -> AsyncGenerator[DummyResponse, None]:
+        """Stream input to output."""
         async for request in request_iter:
             yield DummyResponse(output=self._get_output(request, context))
 
@@ -105,7 +137,9 @@ def dummy_client(
     aio_server: bool = False,
 ):
     """A context manager that returns a gRPC client connected to a DummyService."""
-    with dummy_channel(special_cases, interceptors, client_interceptors, aio_server) as channel:
+    with dummy_channel(
+        special_cases, interceptors, client_interceptors, aio_server
+    ) as channel:
         client = dummy_pb2_grpc.DummyServiceStub(channel)
         yield client
 
@@ -130,7 +164,9 @@ def dummy_channel(
 
     if aio_server:
         aio_loop = asyncio.new_event_loop()
-        aio_thread = AsyncServerThread(aio_loop, AsyncDummyService(special_cases), channel_descriptor, interceptors)
+        aio_thread = _AsyncServerThread(
+            aio_loop, AsyncDummyService(special_cases), channel_descriptor, interceptors
+        )
         aio_thread.start()
         aio_thread.wait_for_server()
     else:
@@ -156,8 +192,14 @@ def dummy_channel(
             server.stop(None)
 
 
-class AsyncServerThread(Thread):
-    def __init__(self, loop: asyncio.BaseEventLoop, service, channel_descriptor: str, interceptors: List[AsyncServerInterceptor]):
+class _AsyncServerThread(Thread):
+    def __init__(
+        self,
+        loop: asyncio.AbstractEventLoop,
+        service,
+        channel_descriptor: str,
+        interceptors: List[AsyncServerInterceptor],
+    ):
         super().__init__()
         self.__loop = loop
         self.__service = service
@@ -170,7 +212,7 @@ class AsyncServerThread(Thread):
         self.__loop.run_until_complete(self.__run_server())
 
     async def __run_server(self):
-        self.__server = grpc.aio.server(interceptors=tuple(self.__interceptors))
+        self.__server = grpc_aio.server(interceptors=tuple(self.__interceptors))
         dummy_pb2_grpc.add_DummyServiceServicer_to_server(self.__service, self.__server)
         self.__server.add_insecure_port(self.__channel_descriptor)
         await self.__server.start()
@@ -181,7 +223,9 @@ class AsyncServerThread(Thread):
         self.__started.wait()
 
     def stop(self):
-        self.__loop.call_soon_threadsafe(lambda: asyncio.ensure_future(self.__shutdown()))
+        self.__loop.call_soon_threadsafe(
+            lambda: asyncio.ensure_future(self.__shutdown())
+        )
 
     async def __shutdown(self) -> None:
         await self.__server.stop(None)

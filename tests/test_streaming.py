@@ -59,7 +59,9 @@ def test_client_streaming(aio):
     intr = AsyncStreamingInterceptor() if aio else StreamingInterceptor()
     interceptors = [intr]
     special_cases = {"error": lambda r, c: 1 / 0}
-    with dummy_client(special_cases=special_cases, interceptors=interceptors, aio_server=aio) as client:
+    with dummy_client(
+        special_cases=special_cases, interceptors=interceptors, aio_server=aio
+    ) as client:
         inputs = ["foo", "bar"]
         input_iter = (DummyRequest(input=input) for input in inputs)
         assert client.ExecuteClientStream(input_iter).output == "foobar"
@@ -75,7 +77,9 @@ def test_server_streaming(aio):
     """Server streaming should work."""
     intr = AsyncStreamingInterceptor() if aio else StreamingInterceptor()
     interceptors = [intr]
-    with dummy_client(special_cases={}, interceptors=interceptors, aio_server=aio) as client:
+    with dummy_client(
+        special_cases={}, interceptors=interceptors, aio_server=aio
+    ) as client:
         output = [
             r.output for r in client.ExecuteServerStream(DummyRequest(input="foo"))
         ]
@@ -87,7 +91,9 @@ def test_client_server_streaming(aio):
     """Bidirectional streaming should work."""
     intr = AsyncStreamingInterceptor() if aio else StreamingInterceptor()
     interceptors = [intr]
-    with dummy_client(special_cases={}, interceptors=interceptors, aio_server=aio) as client:
+    with dummy_client(
+        special_cases={}, interceptors=interceptors, aio_server=aio
+    ) as client:
         inputs = ["foo", "bar"]
         input_iter = (DummyRequest(input=input) for input in inputs)
         response = client.ExecuteClientServerStream(input_iter)
@@ -97,9 +103,15 @@ def test_client_server_streaming(aio):
 @pytest.mark.parametrize("aio", [False, True])
 def test_interceptor_iterates_server_streaming(aio):
     """The iterator should be able to iterate over streamed server responses."""
-    intr = AsyncServerStreamingLoggingInterceptor() if aio else ServerStreamingLoggingInterceptor()
+    intr = (
+        AsyncServerStreamingLoggingInterceptor()
+        if aio
+        else ServerStreamingLoggingInterceptor()
+    )
     interceptors = [intr]
-    with dummy_client(special_cases={}, interceptors=interceptors, aio_server=aio) as client:
+    with dummy_client(
+        special_cases={}, interceptors=interceptors, aio_server=aio
+    ) as client:
         output = [
             r.output for r in client.ExecuteServerStream(DummyRequest(input="foo"))
         ]

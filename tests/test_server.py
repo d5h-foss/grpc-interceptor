@@ -5,7 +5,12 @@ from collections import defaultdict
 import grpc
 import pytest
 
-from grpc_interceptor import AsyncServerInterceptor, MethodName, parse_method_name, ServerInterceptor
+from grpc_interceptor import (
+    AsyncServerInterceptor,
+    MethodName,
+    parse_method_name,
+    ServerInterceptor,
+)
 from grpc_interceptor.testing import dummy_client, DummyRequest
 from grpc_interceptor.testing.dummy_client import dummy_channel
 
@@ -116,7 +121,9 @@ def test_call_counts(aio):
     interceptors = [intr]
 
     special_cases = {"error": lambda r, c: 1 / 0}
-    with dummy_client(special_cases=special_cases, interceptors=interceptors, aio_server=aio) as client:
+    with dummy_client(
+        special_cases=special_cases, interceptors=interceptors, aio_server=aio
+    ) as client:
         assert client.Execute(DummyRequest(input="foo")).output == "foo"
         assert len(intr.num_calls) == 1
         assert intr.num_calls["/DummyService/Execute"] == 1
@@ -150,7 +157,9 @@ def test_modifying_interceptor(aio):
     """Interceptors can modify requests."""
     intr_type = AsyncUppercasingInterceptor if aio else UppercasingInterceptor
     interceptor = intr_type()
-    with dummy_client(special_cases={}, interceptors=[interceptor], aio_server=aio) as client:
+    with dummy_client(
+        special_cases={}, interceptors=[interceptor], aio_server=aio
+    ) as client:
         assert client.Execute(DummyRequest(input="test")).output == "TEST"
 
 
@@ -159,7 +168,9 @@ def test_aborting_interceptor(aio):
     """context.abort called in an interceptor works."""
     intr_type = AsyncAbortingInterceptor if aio else AbortingInterceptor
     interceptor = intr_type("oh no")
-    with dummy_client(special_cases={}, interceptors=[interceptor], aio_server=aio) as client:
+    with dummy_client(
+        special_cases={}, interceptors=[interceptor], aio_server=aio
+    ) as client:
         with pytest.raises(grpc.RpcError) as e:
             client.Execute(DummyRequest(input="test"))
         assert e.value.code() == grpc.StatusCode.ABORTED
