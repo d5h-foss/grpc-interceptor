@@ -1,6 +1,7 @@
 """ExceptionToStatusInterceptor catches GrpcException and sets the gRPC context."""
 
-from contextlib import asynccontextmanager, contextmanager
+# Python 3.6 doesn't have asynccontextmanager so don't use it
+from contextlib import contextmanager
 from typing import (
     Any,
     AsyncGenerator,
@@ -137,16 +138,9 @@ class AsyncExceptionToStatusInterceptor(AsyncServerInterceptor):
         response_iterator: Iterable,
     ) -> AsyncGenerator[Any, None]:
         """Yield all the responses, but check for errors along the way."""
-        async with self._handle_exception(request_or_iterator, context, method_name):
+        try:
             async for r in response_iterator:
                 yield r
-
-    @asynccontextmanager
-    async def _handle_exception(
-        self, request_or_iterator: Any, context: grpc.ServicerContext, method_name: str
-    ) -> Iterator[None]:
-        try:
-            yield
         except Exception as ex:
             await self.handle_exception(ex, request_or_iterator, context, method_name)
 
@@ -189,10 +183,12 @@ class AsyncExceptionToStatusInterceptor(AsyncServerInterceptor):
         method_name: str,
     ) -> Any:
         """Do not call this directly; use the interceptor kwarg on grpc.server()."""
-        async with self._handle_exception(request_or_iterator, context, method_name):
+        try:
             response_or_iterator = method(request_or_iterator, context)
             if not hasattr(response_or_iterator, "__aiter__"):
                 return await response_or_iterator
+        except Exception as ex:
+            await self.handle_exception(ex, request_or_iterator, context, method_name)
 
         return self._generate_responses(
             request_or_iterator, context, method_name, response_or_iterator
