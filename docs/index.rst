@@ -18,7 +18,7 @@ context.
 The secondary aim of this project is to keep the code small and simple. Code you can
 read through and understand quickly gives you confidence and helps debug issues. When
 you install this package, you also don't want a bunch of other packages that might
-cause conflicts within your project. Too many dependencies also slow down installation
+cause conflicts within your project. Too many dependencies slow down installation
 as well as runtime (fresh imports take time). Hence, a goal of this project is to keep
 dependencies to a minimum. The only core dependency is the ``grpc`` package, and the
 ``testing`` extra includes ``protobuf`` as well.
@@ -27,12 +27,16 @@ The ``grpc_interceptor`` package provides the following:
 
 * A ``ServerInterceptor`` base class, to make it easy to define your own server-side interceptors.
   Do not confuse this with the ``grpc.ServerInterceptor`` class.
+* An ``AsyncServerInterceptor`` base class, which is the analogy for async server-side interceptors.
 * An ``ExceptionToStatusInterceptor`` interceptor, so your service can raise exceptions
   that set the gRPC status code correctly (rather than the default of every exception
   resulting in an ``UNKNOWN`` status code). This is something for which pretty much any
   service will have a use.
+* An ``AsyncExceptionToStatusInterceptor`` interceptor, which is the analogy for async
+  ``ExceptionToStatusInterceptor``.
 * A ``ClientInterceptor`` base class, to make it easy to define your own client-side interceptors.
-  Do not confuse this with the ``grpc.ClientInterceptor`` class.
+  Do not confuse this with the ``grpc.ClientInterceptor`` class. (Note, there is currently no
+  async analogy to ``ClientInterceptor``, though contributions are welcome.)
 * An optional testing framework. If you're writing your own interceptors, this is useful.
   If you're just using ``ExceptionToStatusInterceptor`` then you don't need this.
 

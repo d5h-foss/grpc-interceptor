@@ -1,12 +1,20 @@
 """ExceptionToStatusInterceptor catches GrpcException and sets the gRPC context."""
 
-from contextlib import contextmanager
-from typing import Any, Callable, Generator, Iterable, Iterator, Optional
+from contextlib import asynccontextmanager, contextmanager
+from typing import (
+    Any,
+    AsyncGenerator,
+    Callable,
+    Generator,
+    Iterable,
+    Iterator,
+    Optional,
+)
 
 import grpc
 
 from grpc_interceptor.exceptions import GrpcException
-from grpc_interceptor.server import ServerInterceptor
+from grpc_interceptor.server import AsyncServerInterceptor, ServerInterceptor
 
 
 class ExceptionToStatusInterceptor(ServerInterceptor):
@@ -106,3 +114,86 @@ class ExceptionToStatusInterceptor(ServerInterceptor):
         else:
             # return a single response
             return response_or_iterator
+
+
+class AsyncExceptionToStatusInterceptor(AsyncServerInterceptor):
+    """An interceptor that catches exceptions and sets the RPC status and details.
+
+    This is the async analogy to ExceptionToStatusInterceptor. Please see that class'
+    documentation for more information.
+    """
+
+    def __init__(self, status_on_unknown_exception: Optional[grpc.StatusCode] = None):
+        if status_on_unknown_exception == grpc.StatusCode.OK:
+            raise ValueError("The status code for unknown exceptions cannot be OK")
+
+        self._status_on_unknown_exception = status_on_unknown_exception
+
+    async def _generate_responses(
+        self,
+        request_or_iterator: Any,
+        context: grpc.ServicerContext,
+        method_name: str,
+        response_iterator: Iterable,
+    ) -> AsyncGenerator[Any, None]:
+        """Yield all the responses, but check for errors along the way."""
+        async with self._handle_exception(request_or_iterator, context, method_name):
+            async for r in response_iterator:
+                yield r
+
+    @asynccontextmanager
+    async def _handle_exception(
+        self, request_or_iterator: Any, context: grpc.ServicerContext, method_name: str
+    ) -> Iterator[None]:
+        try:
+            yield
+        except Exception as ex:
+            await self.handle_exception(ex, request_or_iterator, context, method_name)
+
+    async def handle_exception(
+        self,
+        ex: Exception,
+        request_or_iterator: Any,
+        context: grpc.ServicerContext,
+        method_name: str,
+    ) -> None:
+        """Override this if extending ExceptionToStatusInterceptor.
+
+        This will get called when an exception is raised while handling the RPC.
+
+        Args:
+            ex: The exception that was raised.
+            request_or_iterator: The RPC request, as a protobuf message if it is a
+                unary request, or an iterator of protobuf messages if it is a streaming
+                request.
+            context: The servicer context. You probably want to call context.abort(...)
+            method_name: The name of the RPC being called.
+
+        Raises:
+            This method must raise and cannot return, as in general there's no
+            meaningful RPC response to return if an exception has occurred. You can
+            raise the original exception, ex, or something else.
+        """
+        if isinstance(ex, GrpcException):
+            await context.abort(ex.status_code, ex.details)
+        else:
+            if self._status_on_unknown_exception is not None:
+                await context.abort(self._status_on_unknown_exception, repr(ex))
+        raise ex
+
+    async def intercept(
+        self,
+        method: Callable,
+        request_or_iterator: Any,
+        context: grpc.ServicerContext,
+        method_name: str,
+    ) -> Any:
+        """Do not call this directly; use the interceptor kwarg on grpc.server()."""
+        async with self._handle_exception(request_or_iterator, context, method_name):
+            response_or_iterator = method(request_or_iterator, context)
+            if not hasattr(response_or_iterator, "__aiter__"):
+                return await response_or_iterator
+
+        return self._generate_responses(
+            request_or_iterator, context, method_name, response_or_iterator
+        )

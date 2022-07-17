@@ -137,6 +137,12 @@ def dummy_client(
     aio_server: bool = False,
 ):
     """A context manager that returns a gRPC client connected to a DummyService."""
+    # Sanity check that the interceptors are async if using an async server,
+    # otherwise the tests will just hang.
+    for intr in (interceptors or []):
+        assert aio_server == isinstance(
+            intr, AsyncServerInterceptor
+        ), "Set aio_server correctly"
     with dummy_channel(
         special_cases, interceptors, client_interceptors, aio_server
     ) as channel:

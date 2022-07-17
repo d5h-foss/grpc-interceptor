@@ -84,7 +84,7 @@ class AsyncServerInterceptor(grpc_aio.ServerInterceptor, metaclass=abc.ABCMeta):
         request: Any,
         context: grpc_aio.ServicerContext,
         method_name: str,
-    ) -> Any:
+    ) -> Any:  # pragma: no cover
         """Override this method to implement a custom interceptor.
 
         You should call await method(request, context) to invoke the next handler
@@ -102,7 +102,11 @@ class AsyncServerInterceptor(grpc_aio.ServerInterceptor, metaclass=abc.ABCMeta):
             which is typically the RPC method response, as a protobuf message. The
             interceptor is free to modify this in some way, however.
         """
-        return await method(request, context)  # pragma: no cover
+        response_or_iterator = method(request, context)
+        if hasattr(response_or_iterator, "__aiter__"):
+            return response_or_iterator
+        else:
+            return await response_or_iterator
 
     # Implementation of grpc.ServerInterceptor, do not override.
     async def intercept_service(self, continuation, handler_call_details):
