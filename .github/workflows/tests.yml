@@ -9,7 +9,7 @@ jobs:
                 python-version: ['3.9']
                 include:  # Oldest versions >=3.6.1 that are available for each platform
                 - platform: ubuntu-latest
-                  python-version: 3.6.1
+                  python-version: 3.6  # Will actually use latest 3.6.x
                 - platform: macos-latest
                   python-version: 3.7
                 - platform: windows-latest
@@ -18,9 +18,9 @@ jobs:
         runs-on: ${{matrix.platform}}
         steps:
         - uses: actions/checkout@v2
-        - uses: actions/setup-python@v1
+        - uses: actions/setup-python@v4
           with:
               python-version: ${{matrix.python-version}}
               architecture: x64
-        - run: pip install nox==2020.5.24 toml==0.10.2 poetry==1.0.9
+        - run: pip install nox==2022.1.7 toml==0.10.2 poetry==1.0.9
         - run: nox
