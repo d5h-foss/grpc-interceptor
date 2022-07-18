@@ -5,9 +5,9 @@ jobs:
         runs-on: ubuntu-latest
         steps:
         - uses: actions/checkout@v2
-        - uses: actions/setup-python@v1
+        - uses: actions/setup-python@v4
           with:
-              python-version: '3.6.1'
+              python-version: '3.6.7'  # Should be 3.6.1, but is unavailable on GH :(
               architecture: x64
         - run: pip install nox==2020.5.24 toml==0.10.2 poetry==1.0.9
         - run: nox --sessions mindeps
