@@ -7,9 +7,9 @@ jobs:
             matrix:
                 platform: [ubuntu-latest, macos-latest, windows-latest]
                 python-version: ['3.9']
-                include:  # Oldest versions >=3.6 that are available for each platform
+                include:  # Oldest versions >=3.6.1 that are available for each platform
                 - platform: ubuntu-latest
-                  python-version: 3.6
+                  python-version: 3.6.1
                 - platform: macos-latest
                   python-version: 3.7
                 - platform: windows-latest

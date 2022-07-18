@@ -135,16 +135,16 @@ def dummy_client(
     interceptors: Optional[List[ServerInterceptor]] = None,
     client_interceptors: Optional[List[ClientInterceptor]] = None,
     aio_server: bool = False,
+    aio_client: bool = False,
 ):
     """A context manager that returns a gRPC client connected to a DummyService."""
     # Sanity check that the interceptors are async if using an async server,
     # otherwise the tests will just hang.
     for intr in (interceptors or []):
-        assert aio_server == isinstance(
-            intr, AsyncServerInterceptor
-        ), "Set aio_server correctly"
+        if aio_server != isinstance(intr, AsyncServerInterceptor):
+            raise TypeError("Set aio_server correctly")
     with dummy_channel(
-        special_cases, interceptors, client_interceptors, aio_server
+        special_cases, interceptors, client_interceptors, aio_server, aio_client
     ) as channel:
         client = dummy_pb2_grpc.DummyServiceStub(channel)
         yield client
@@ -156,6 +156,7 @@ def dummy_channel(
     interceptors: Optional[List[ServerInterceptor]] = None,
     client_interceptors: Optional[List[ClientInterceptor]] = None,
     aio_server: bool = False,
+    aio_client: bool = False,
 ):
     """A context manager that returns a gRPC channel connected to a DummyService."""
     if not interceptors:
@@ -184,13 +185,20 @@ def dummy_channel(
         server.add_insecure_port(channel_descriptor)
         server.start()
 
-    channel = grpc.insecure_channel(channel_descriptor)
-    if client_interceptors:
-        channel = grpc.intercept_channel(channel, *client_interceptors)
+    if aio_client:
+        channel = grpc_aio.insecure_channel(channel_descriptor)
+        # Client interceptors might work, but I haven't tested them yet.
+        if client_interceptors:
+            raise TypeError("Client interceptors not supported with async channel")
+    else:
+        channel = grpc.insecure_channel(channel_descriptor)
+        if client_interceptors:
+            channel = grpc.intercept_channel(channel, *client_interceptors)
 
     try:
         yield channel
     finally:
+        channel.close()
         if aio_server:
             aio_thread.stop()
             aio_thread.join()

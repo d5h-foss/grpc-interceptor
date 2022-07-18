@@ -101,8 +101,8 @@ def test_status_string():
 
 @pytest.mark.parametrize("aio", [False, True])
 def test_no_exception(aio):
-    interceptors = _get_interceptors(aio)
     """An RPC with no exceptions should work as if the interceptor wasn't there."""
+    interceptors = _get_interceptors(aio)
     with dummy_client(
         special_cases={}, interceptors=interceptors, aio_server=aio
     ) as client:

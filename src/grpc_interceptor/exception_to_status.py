@@ -5,6 +5,7 @@ from contextlib import contextmanager
 from typing import (
     Any,
     AsyncGenerator,
+    AsyncIterable,
     Callable,
     Generator,
     Iterable,
@@ -135,7 +136,7 @@ class AsyncExceptionToStatusInterceptor(AsyncServerInterceptor):
         request_or_iterator: Any,
         context: grpc.ServicerContext,
         method_name: str,
-        response_iterator: Iterable,
+        response_iterator: AsyncIterable,
     ) -> AsyncGenerator[Any, None]:
         """Yield all the responses, but check for errors along the way."""
         try:

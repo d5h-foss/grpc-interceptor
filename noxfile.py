@@ -11,7 +11,7 @@ import toml
 
 
 nox.options.sessions = "lint", "mypy", "safety", "tests", "xdoctest", "mindeps"
-PY_VERSIONS = ["3.9", "3.8", "3.7", "3.6"]
+PY_VERSIONS = ["3.9", "3.8", "3.7", "3.6.1"]
 PY_LATEST = "3.9"
 
 
@@ -102,7 +102,7 @@ def safety(session):
         session.run("safety", "check", f"--file={requirements}", "--full-report")
 
 
-@nox.session(python="3.6")
+@nox.session(python="3.6.1")
 def mindeps(session):
     """Run test with minimum versions of dependencies."""
     deps = _parse_minimum_dependency_versions()
@@ -150,6 +150,10 @@ def _parse_minimum_dependency_versions() -> List[str]:
                 continue
 
             if not isinstance(constraint, str):
+                # Don't install deps with python contraints, because they're always for
+                # newer versions on python.
+                if "python" in constraint:
+                    continue
                 constraint = constraint["version"]
 
             if constraint.startswith("^") or constraint.startswith("~"):
