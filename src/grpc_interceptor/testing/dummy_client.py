@@ -7,6 +7,7 @@ import os
 from tempfile import gettempdir
 from threading import Event, Thread
 from typing import (
+    Any,
     AsyncGenerator,
     AsyncIterable,
     Callable,
@@ -129,6 +130,60 @@ class AsyncDummyService(dummy_pb2_grpc.DummyServiceServicer, _SpecialCaseMixin):
             yield DummyResponse(output=self._get_output(request, context))
 
 
+class AsyncReadWriteDummyService(
+    dummy_pb2_grpc.DummyServiceServicer, _SpecialCaseMixin
+):
+    """Similar to AsyncDummyService except uses the read / write API.
+
+    See DummyService for more info.
+    """
+
+    def __init__(
+        self, special_cases: Dict[str, SpecialCaseFunction],
+    ):
+        self._special_cases = special_cases
+
+    async def Execute(
+        self, request: DummyRequest, context: grpc_aio.ServicerContext
+    ) -> DummyResponse:
+        """Echo the input, or take on of the special cases actions."""
+        return DummyResponse(output=self._get_output(request, context))
+
+    async def ExecuteClientStream(
+        self, unused_request: Any, context: grpc_aio.ServicerContext,
+    ) -> DummyResponse:
+        """Iterate over the input and concatenates the strings into the output."""
+        output = []
+        while True:
+            request = await context.read()
+            if request == grpc_aio.EOF:
+                break
+            output.append(self._get_output(request, context))
+
+        return DummyResponse(output="".join(output))
+
+    async def ExecuteServerStream(
+        self, request: DummyRequest, context: grpc_aio.ServicerContext
+    ) -> None:
+        """Stream one character at a time from the input."""
+        for c in self._get_output(request, context):
+            await context.write(DummyResponse(output=c))
+
+    async def ExecuteClientServerStream(
+        self,
+        request_iter: AsyncIterable[DummyRequest],
+        context: grpc_aio.ServicerContext,
+    ) -> None:
+        """Stream input to output."""
+        while True:
+            request = await context.read()
+            if request == grpc_aio.EOF:
+                break
+            await context.write(
+                DummyResponse(output=self._get_output(request, context))
+            )
+
+
 @contextmanager
 def dummy_client(
     special_cases: Dict[str, SpecialCaseFunction],
@@ -136,15 +191,21 @@ def dummy_client(
     client_interceptors: Optional[List[ClientInterceptor]] = None,
     aio_server: bool = False,
     aio_client: bool = False,
+    aio_read_write: bool = False,
 ):
     """A context manager that returns a gRPC client connected to a DummyService."""
     # Sanity check that the interceptors are async if using an async server,
     # otherwise the tests will just hang.
-    for intr in (interceptors or []):
+    for intr in interceptors or []:
         if aio_server != isinstance(intr, AsyncServerInterceptor):
             raise TypeError("Set aio_server correctly")
     with dummy_channel(
-        special_cases, interceptors, client_interceptors, aio_server, aio_client
+        special_cases,
+        interceptors,
+        client_interceptors,
+        aio_server=aio_server,
+        aio_client=aio_client,
+        aio_read_write=aio_read_write,
     ) as channel:
         client = dummy_pb2_grpc.DummyServiceStub(channel)
         yield client
@@ -157,6 +218,7 @@ def dummy_channel(
     client_interceptors: Optional[List[ClientInterceptor]] = None,
     aio_server: bool = False,
     aio_client: bool = False,
+    aio_read_write: bool = False,
 ):
     """A context manager that returns a gRPC channel connected to a DummyService."""
     if not interceptors:
@@ -169,10 +231,29 @@ def dummy_channel(
     else:
         channel_descriptor = f"unix://{gettempdir()}/{uuid4()}.sock"
 
+    if aio_client:
+        channel = grpc_aio.insecure_channel(channel_descriptor)
+        # Client interceptors might work, but I haven't tested them yet.
+        if client_interceptors:
+            raise TypeError("Client interceptors not supported with async channel")
+    else:
+        channel = grpc.insecure_channel(channel_descriptor)
+        if client_interceptors:
+            channel = grpc.intercept_channel(channel, *client_interceptors)
+
     if aio_server:
+        service = (
+            AsyncReadWriteDummyService(special_cases)
+            if aio_read_write
+            else AsyncDummyService(special_cases)
+        )
         aio_loop = asyncio.new_event_loop()
         aio_thread = _AsyncServerThread(
-            aio_loop, AsyncDummyService(special_cases), channel_descriptor, interceptors
+            aio_loop,
+            service,
+            channel if aio_client else None,
+            channel_descriptor,
+            interceptors,
         )
         aio_thread.start()
         aio_thread.wait_for_server()
@@ -185,20 +266,12 @@ def dummy_channel(
         server.add_insecure_port(channel_descriptor)
         server.start()
 
-    if aio_client:
-        channel = grpc_aio.insecure_channel(channel_descriptor)
-        # Client interceptors might work, but I haven't tested them yet.
-        if client_interceptors:
-            raise TypeError("Client interceptors not supported with async channel")
-    else:
-        channel = grpc.insecure_channel(channel_descriptor)
-        if client_interceptors:
-            channel = grpc.intercept_channel(channel, *client_interceptors)
-
     try:
         yield channel
     finally:
-        channel.close()
+        if not aio_client:
+            # async channel is closed by _AsyncServerThread
+            channel.close()
         if aio_server:
             aio_thread.stop()
             aio_thread.join()
@@ -211,12 +284,14 @@ class _AsyncServerThread(Thread):
         self,
         loop: asyncio.AbstractEventLoop,
         service,
+        optional_async_client_channel,
         channel_descriptor: str,
         interceptors: List[AsyncServerInterceptor],
     ):
         super().__init__()
         self.__loop = loop
         self.__service = service
+        self.__optional_async_client_channel = optional_async_client_channel
         self.__channel_descriptor = channel_descriptor
         self.__interceptors = interceptors
         self.__started = Event()
@@ -232,6 +307,8 @@ class _AsyncServerThread(Thread):
         await self.__server.start()
         self.__started.set()
         await self.__server.wait_for_termination()
+        if self.__optional_async_client_channel:
+            await self.__optional_async_client_channel.close()
 
     def wait_for_server(self):
         self.__started.wait()

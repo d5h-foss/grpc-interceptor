@@ -137,13 +137,17 @@ class AsyncClientStreamingLoggingInterceptor(AsyncServerInterceptor):
 
 
 @pytest.mark.parametrize("aio", [False, True])
-def test_client_streaming(aio):
+@pytest.mark.parametrize("aio_rw", [False, True])
+def test_client_streaming(aio, aio_rw):
     """Client streaming should work."""
     intr = AsyncStreamingInterceptor() if aio else StreamingInterceptor()
     interceptors = [intr]
     special_cases = {"error": lambda r, c: 1 / 0}
     with dummy_client(
-        special_cases=special_cases, interceptors=interceptors, aio_server=aio
+        special_cases=special_cases,
+        interceptors=interceptors,
+        aio_server=aio,
+        aio_read_write=aio_rw,
     ) as client:
         inputs = ["foo", "bar"]
         input_iter = (DummyRequest(input=input) for input in inputs)

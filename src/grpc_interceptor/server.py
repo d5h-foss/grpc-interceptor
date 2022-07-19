@@ -122,20 +122,28 @@ class AsyncServerInterceptor(grpc_aio.ServerInterceptor, metaclass=abc.ABCMeta):
 
             async def invoke_intercept_method(request, context):
                 method_name = handler_call_details.method
-                iterator = self.intercept(
+                coroutine_or_asyncgen = self.intercept(
                     next_handler_method, request, context, method_name,
                 )
-                # Async streaming gRPC methods return async_generator, because they use
-                # the async def + yield syntax. However, this is NOT a coroutine and
-                # hence is not awaitable. This can be a problem if the interceptor
+
+                # Async server streaming handlers return async_generator, because they
+                # use the async def + yield syntax. However, this is NOT a coroutine
+                # and hence is not awaitable. This can be a problem if the interceptor
                 # ignores the individual streaming response items and simply returns the
                 # result of method(request, context). In that case the interceptor IS a
                 # coroutine, and hence should be awaited. In both cases, we need
                 # something we can iterate over so that THIS function is an
                 # async_generator like the actual RPC method.
-                if iscoroutine(iterator):
-                    iterator = await iterator
-                async for r in iterator:
+                if iscoroutine(coroutine_or_asyncgen):
+                    asyncgen_or_none = await coroutine_or_asyncgen
+                    # If a handler is using the read/write API, it will return None.
+                    if not asyncgen_or_none:
+                        return
+                    asyncgen = asyncgen_or_none
+                else:
+                    asyncgen = coroutine_or_asyncgen
+
+                async for r in asyncgen:
                     yield r
 
         else:
