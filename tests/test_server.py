@@ -5,7 +5,12 @@ from collections import defaultdict
 import grpc
 import pytest
 
-from grpc_interceptor import MethodName, parse_method_name, ServerInterceptor
+from grpc_interceptor import (
+    AsyncServerInterceptor,
+    MethodName,
+    parse_method_name,
+    ServerInterceptor,
+)
 from grpc_interceptor.testing import dummy_client, DummyRequest
 from grpc_interceptor.testing.dummy_client import dummy_channel
 
@@ -27,6 +32,23 @@ class CountingInterceptor(ServerInterceptor):
             raise
 
 
+class AsyncCountingInterceptor(AsyncServerInterceptor):
+    """A test interceptor that counts calls and exceptions."""
+
+    def __init__(self):
+        self.num_calls = defaultdict(int)
+        self.num_errors = defaultdict(int)
+
+    async def intercept(self, method, request, context, method_name):
+        """Count each call and exception."""
+        self.num_calls[method_name] += 1
+        try:
+            return await method(request, context)
+        except Exception:
+            self.num_errors[method_name] += 1
+            raise
+
+
 class SideEffectInterceptor(ServerInterceptor):
     """A test interceptor that calls a function for the side effect."""
 
@@ -39,6 +61,18 @@ class SideEffectInterceptor(ServerInterceptor):
         return method(request, context)
 
 
+class AsyncSideEffectInterceptor(AsyncServerInterceptor):
+    """A test interceptor that calls a function for the side effect."""
+
+    def __init__(self, side_effect):
+        self._side_effect = side_effect
+
+    async def intercept(self, method, request, context, method_name):
+        """Call the side effect and then the RPC method."""
+        self._side_effect()
+        return await method(request, context)
+
+
 class UppercasingInterceptor(ServerInterceptor):
     """A test interceptor that modifies the request by uppercasing the input field."""
 
@@ -46,6 +80,15 @@ class UppercasingInterceptor(ServerInterceptor):
         """Uppercases request.input."""
         request.input = request.input.upper()
         return method(request, context)
+
+
+class AsyncUppercasingInterceptor(AsyncServerInterceptor):
+    """A test interceptor that modifies the request by uppercasing the input field."""
+
+    async def intercept(self, method, request, context, method_name):
+        """Uppercases request.input."""
+        request.input = request.input.upper()
+        return await method(request, context)
 
 
 class AbortingInterceptor(ServerInterceptor):
@@ -59,13 +102,28 @@ class AbortingInterceptor(ServerInterceptor):
         context.abort(grpc.StatusCode.ABORTED, self._message)
 
 
-def test_call_counts():
+class AsyncAbortingInterceptor(AsyncServerInterceptor):
+    """A test interceptor that aborts before calling the handler."""
+
+    def __init__(self, message):
+        self._message = message
+
+    async def intercept(self, method, request, context, method_name):
+        """Calls abort."""
+        await context.abort(grpc.StatusCode.ABORTED, self._message)
+
+
+@pytest.mark.parametrize("aio", [False, True])
+def test_call_counts(aio):
     """The counts should be correct."""
-    intr = CountingInterceptor()
+    intr_type = AsyncCountingInterceptor if aio else CountingInterceptor
+    intr = intr_type()
     interceptors = [intr]
 
     special_cases = {"error": lambda r, c: 1 / 0}
-    with dummy_client(special_cases=special_cases, interceptors=interceptors) as client:
+    with dummy_client(
+        special_cases=special_cases, interceptors=interceptors, aio_server=aio
+    ) as client:
         assert client.Execute(DummyRequest(input="foo")).output == "foo"
         assert len(intr.num_calls) == 1
         assert intr.num_calls["/DummyService/Execute"] == 1
@@ -80,29 +138,39 @@ def test_call_counts():
         assert intr.num_errors["/DummyService/Execute"] == 1
 
 
-def test_interceptor_chain():
+@pytest.mark.parametrize("aio", [False, True])
+def test_interceptor_chain(aio):
     """Interceptors are called in the right order."""
     trace = []
-    interceptor1 = SideEffectInterceptor(lambda: trace.append(1))
-    interceptor2 = SideEffectInterceptor(lambda: trace.append(2))
+    intr_type = AsyncSideEffectInterceptor if aio else SideEffectInterceptor
+    interceptor1 = intr_type(lambda: trace.append(1))
+    interceptor2 = intr_type(lambda: trace.append(2))
     with dummy_client(
-        special_cases={}, interceptors=[interceptor1, interceptor2]
+        special_cases={}, interceptors=[interceptor1, interceptor2], aio_server=aio
     ) as client:
         assert client.Execute(DummyRequest(input="test")).output == "test"
         assert trace == [1, 2]
 
 
-def test_modifying_interceptor():
+@pytest.mark.parametrize("aio", [False, True])
+def test_modifying_interceptor(aio):
     """Interceptors can modify requests."""
-    interceptor = UppercasingInterceptor()
-    with dummy_client(special_cases={}, interceptors=[interceptor]) as client:
+    intr_type = AsyncUppercasingInterceptor if aio else UppercasingInterceptor
+    interceptor = intr_type()
+    with dummy_client(
+        special_cases={}, interceptors=[interceptor], aio_server=aio
+    ) as client:
         assert client.Execute(DummyRequest(input="test")).output == "TEST"
 
 
-def test_aborting_interceptor():
+@pytest.mark.parametrize("aio", [False, True])
+def test_aborting_interceptor(aio):
     """context.abort called in an interceptor works."""
-    interceptor = AbortingInterceptor("oh no")
-    with dummy_client(special_cases={}, interceptors=[interceptor]) as client:
+    intr_type = AsyncAbortingInterceptor if aio else AbortingInterceptor
+    interceptor = intr_type("oh no")
+    with dummy_client(
+        special_cases={}, interceptors=[interceptor], aio_server=aio
+    ) as client:
         with pytest.raises(grpc.RpcError) as e:
             client.Execute(DummyRequest(input="test"))
         assert e.value.code() == grpc.StatusCode.ABORTED

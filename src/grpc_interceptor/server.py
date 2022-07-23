@@ -1,9 +1,11 @@
 """Base class for server-side interceptors."""
 
 import abc
+from asyncio import iscoroutine
 from typing import Any, Callable, Tuple
 
 import grpc
+from grpc import aio as grpc_aio  # Needed for grpcio pre-1.33.2
 
 
 class ServerInterceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
@@ -61,6 +63,96 @@ class ServerInterceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
             return self.intercept(
                 next_handler_method, request_or_iterator, context, method_name,
             )
+
+        return handler_factory(
+            invoke_intercept_method,
+            request_deserializer=next_handler.request_deserializer,
+            response_serializer=next_handler.response_serializer,
+        )
+
+
+class AsyncServerInterceptor(grpc_aio.ServerInterceptor, metaclass=abc.ABCMeta):
+    """Base class for asyncio server-side interceptors.
+
+    To implement an interceptor, subclass this class and override the intercept method.
+    """
+
+    @abc.abstractmethod
+    async def intercept(
+        self,
+        method: Callable,
+        request: Any,
+        context: grpc_aio.ServicerContext,
+        method_name: str,
+    ) -> Any:  # pragma: no cover
+        """Override this method to implement a custom interceptor.
+
+        You should call await method(request, context) to invoke the next handler
+        (either the RPC method implementation, or the next interceptor in the list).
+
+        Args:
+            method: Either the RPC method implementation, or the next interceptor in
+                the chain.
+            request: The RPC request, as a protobuf message.
+            context: The ServicerContext pass by gRPC to the service.
+            method_name: A string of the form "/protobuf.package.Service/Method"
+
+        Returns:
+            This should generally return the result of await method(request, context),
+            which is typically the RPC method response, as a protobuf message. The
+            interceptor is free to modify this in some way, however.
+        """
+        response_or_iterator = method(request, context)
+        if hasattr(response_or_iterator, "__aiter__"):
+            return response_or_iterator
+        else:
+            return await response_or_iterator
+
+    # Implementation of grpc.ServerInterceptor, do not override.
+    async def intercept_service(self, continuation, handler_call_details):
+        """Implementation of grpc.aio.ServerInterceptor.
+
+        This is not part of the grpc_interceptor.AsyncServerInterceptor API, but must
+        have a public name. Do not override it, unless you know what you're doing.
+        """
+        next_handler = await continuation(handler_call_details)
+        handler_factory, next_handler_method = _get_factory_and_method(next_handler)
+
+        if next_handler.response_streaming:
+
+            async def invoke_intercept_method(request, context):
+                method_name = handler_call_details.method
+                coroutine_or_asyncgen = self.intercept(
+                    next_handler_method, request, context, method_name,
+                )
+
+                # Async server streaming handlers return async_generator, because they
+                # use the async def + yield syntax. However, this is NOT a coroutine
+                # and hence is not awaitable. This can be a problem if the interceptor
+                # ignores the individual streaming response items and simply returns the
+                # result of method(request, context). In that case the interceptor IS a
+                # coroutine, and hence should be awaited. In both cases, we need
+                # something we can iterate over so that THIS function is an
+                # async_generator like the actual RPC method.
+                if iscoroutine(coroutine_or_asyncgen):
+                    asyncgen_or_none = await coroutine_or_asyncgen
+                    # If a handler is using the read/write API, it will return None.
+                    if not asyncgen_or_none:
+                        return
+                    asyncgen = asyncgen_or_none
+                else:
+                    asyncgen = coroutine_or_asyncgen
+
+                async for r in asyncgen:
+                    yield r
+
+        else:
+
+            async def invoke_intercept_method(request, context):
+                method_name = handler_call_details.method
+                return await self.intercept(
+                    next_handler_method, request, context, method_name,
+                )
 
         return handler_factory(
             invoke_intercept_method,

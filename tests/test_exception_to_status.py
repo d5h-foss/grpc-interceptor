@@ -1,11 +1,15 @@
 """Test cases for ExceptionToStatusInterceptor."""
 import re
+from typing import List, Optional, Union
 
 import grpc
 import pytest
 
 from grpc_interceptor import exceptions as gx
-from grpc_interceptor.exception_to_status import ExceptionToStatusInterceptor
+from grpc_interceptor.exception_to_status import (
+    AsyncExceptionToStatusInterceptor,
+    ExceptionToStatusInterceptor,
+)
 from grpc_interceptor.testing import dummy_client, DummyRequest, raises
 
 
@@ -33,10 +37,41 @@ class ExtendedExceptionToStatusInterceptor(ExceptionToStatusInterceptor):
             super().handle_exception(ex, request_or_iterator, context, method_name)
 
 
-@pytest.fixture
-def interceptors():
-    """The interceptor chain for the majority of this test suite."""
-    return [ExceptionToStatusInterceptor()]
+class AsyncExtendedExceptionToStatusInterceptor(AsyncExceptionToStatusInterceptor):
+    """A test case for extending AsyncExceptionToStatusInterceptor."""
+
+    def __init__(self):
+        self.caught_custom_exception = False
+
+    async def handle_exception(self, ex, request_or_iterator, context, method_name):
+        """Handles NonGrpcException in a special way."""
+        if isinstance(ex, NonGrpcException):
+            self.caught_custom_exception = True
+            await context.abort(
+                NonGrpcException.TEST_STATUS_CODE, NonGrpcException.TEST_DETAILS
+            )
+        else:
+            await super().handle_exception(
+                ex, request_or_iterator, context, method_name
+            )
+
+
+def _get_interceptors(
+    aio: bool, status_on_unknown_exception: Optional[grpc.StatusCode] = None
+) -> List[Union[ExceptionToStatusInterceptor, AsyncExceptionToStatusInterceptor]]:
+    return (
+        [
+            AsyncExceptionToStatusInterceptor(
+                status_on_unknown_exception=status_on_unknown_exception
+            )
+        ]
+        if aio
+        else [
+            ExceptionToStatusInterceptor(
+                status_on_unknown_exception=status_on_unknown_exception
+            )
+        ]
+    )
 
 
 def test_repr():
@@ -64,16 +99,24 @@ def test_status_string():
     assert gx.NotFound().status_string == "NOT_FOUND"
 
 
-def test_no_exception(interceptors):
+@pytest.mark.parametrize("aio", [False, True])
+def test_no_exception(aio):
     """An RPC with no exceptions should work as if the interceptor wasn't there."""
-    with dummy_client(special_cases={}, interceptors=interceptors) as client:
+    interceptors = _get_interceptors(aio)
+    with dummy_client(
+        special_cases={}, interceptors=interceptors, aio_server=aio
+    ) as client:
         assert client.Execute(DummyRequest(input="foo")).output == "foo"
 
 
-def test_custom_details(interceptors):
+@pytest.mark.parametrize("aio", [False, True])
+def test_custom_details(aio):
     """We can set custom details."""
+    interceptors = _get_interceptors(aio)
     special_cases = {"error": raises(gx.NotFound(details="custom"))}
-    with dummy_client(special_cases=special_cases, interceptors=interceptors) as client:
+    with dummy_client(
+        special_cases=special_cases, interceptors=interceptors, aio_server=aio
+    ) as client:
         assert (
             client.Execute(DummyRequest(input="foo")).output == "foo"
         )  # Test a happy path too
@@ -83,24 +126,29 @@ def test_custom_details(interceptors):
         assert e.value.details() == "custom"
 
 
-def test_non_grpc_exception(interceptors):
+@pytest.mark.parametrize("aio", [False, True])
+def test_non_grpc_exception(aio):
     """Exceptions other than GrpcExceptions are ignored."""
+    interceptors = _get_interceptors(aio)
     special_cases = {"error": raises(ValueError("oops"))}
-    with dummy_client(special_cases=special_cases, interceptors=interceptors) as client:
+    with dummy_client(
+        special_cases=special_cases, interceptors=interceptors, aio_server=aio
+    ) as client:
         with pytest.raises(grpc.RpcError) as e:
             client.Execute(DummyRequest(input="error"))
         assert e.value.code() == grpc.StatusCode.UNKNOWN
 
 
-def test_non_grpc_exception_with_override():
+@pytest.mark.parametrize("aio", [False, True])
+def test_non_grpc_exception_with_override(aio):
     """We can set a custom status code when non-GrpcExceptions are raised."""
-    interceptors = [
-        ExceptionToStatusInterceptor(
-            status_on_unknown_exception=grpc.StatusCode.INTERNAL
-        )
-    ]
+    interceptors = _get_interceptors(
+        aio, status_on_unknown_exception=grpc.StatusCode.INTERNAL
+    )
     special_cases = {"error": raises(ValueError("oops"))}
-    with dummy_client(special_cases=special_cases, interceptors=interceptors) as client:
+    with dummy_client(
+        special_cases=special_cases, interceptors=interceptors, aio_server=aio
+    ) as client:
         with pytest.raises(grpc.RpcError) as e:
             client.Execute(DummyRequest(input="error"))
         assert e.value.code() == grpc.StatusCode.INTERNAL
@@ -111,14 +159,20 @@ def test_override_with_ok():
     """We cannot set the default status code to OK."""
     with pytest.raises(ValueError):
         ExceptionToStatusInterceptor(status_on_unknown_exception=grpc.StatusCode.OK)
+    with pytest.raises(ValueError):
+        AsyncExceptionToStatusInterceptor(
+            status_on_unknown_exception=grpc.StatusCode.OK
+        )
 
 
-def test_all_exceptions(interceptors):
+@pytest.mark.parametrize("aio", [False, True])
+def test_all_exceptions(aio):
     """Every gRPC status code is represented, and they each are unique.
 
     Make sure we aren't missing any status codes, and that we didn't copy paste the
     same status code or details into two different classes.
     """
+    interceptors = _get_interceptors(aio)
     all_status_codes = {sc for sc in grpc.StatusCode if sc != grpc.StatusCode.OK}
     seen_codes = set()
     seen_details = set()
@@ -128,7 +182,7 @@ def test_all_exceptions(interceptors):
         assert ex
         special_cases = {"error": raises(ex())}
         with dummy_client(
-            special_cases=special_cases, interceptors=interceptors
+            special_cases=special_cases, interceptors=interceptors, aio_server=aio
         ) as client:
             with pytest.raises(grpc.RpcError) as e:
                 client.Execute(DummyRequest(input="error"))
@@ -141,11 +195,14 @@ def test_all_exceptions(interceptors):
     assert len(seen_details) == len(all_status_codes)
 
 
-def test_exception_in_streaming_response(interceptors):
+@pytest.mark.parametrize("aio", [False, True])
+def test_exception_in_streaming_response(aio):
     """Exceptions are raised correctly from streaming responses."""
+    interceptors = _get_interceptors(aio)
     with dummy_client(
         special_cases={"error": raises(gx.NotFound("not found!"))},
         interceptors=interceptors,
+        aio_server=aio,
     ) as client:
         with pytest.raises(grpc.RpcError) as e:
             list(client.ExecuteServerStream(DummyRequest(input="error")))
@@ -163,12 +220,17 @@ def test_not_ok():
         gx.GrpcException(status_code=grpc.StatusCode.OK)
 
 
-def test_extending():
+@pytest.mark.parametrize("aio", [False, True])
+def test_extending(aio):
     """We can extend ExceptionToStatusInterceptor."""
-    interceptor = ExtendedExceptionToStatusInterceptor()
+    interceptor = (
+        AsyncExtendedExceptionToStatusInterceptor()
+        if aio
+        else ExtendedExceptionToStatusInterceptor()
+    )
     special_cases = {"error": raises(NonGrpcException())}
     with dummy_client(
-        special_cases=special_cases, interceptors=[interceptor]
+        special_cases=special_cases, interceptors=[interceptor], aio_server=aio
     ) as client:
         assert (
             client.Execute(DummyRequest(input="foo")).output == "foo"

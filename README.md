@@ -170,4 +170,9 @@ started.
 
 # Documentation
 
-Read the [complete documentation here](https://grpc-interceptor.readthedocs.io/).
+The examples above showed usage for simple unary-unary RPC calls. For examples of
+streaming and asyncio RPCs, read the
+[complete documentation here](https://grpc-interceptor.readthedocs.io/).
+
+Note that there is no asyncio client interceptors at the moment, though contributions
+are welcome.

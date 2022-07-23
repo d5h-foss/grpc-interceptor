@@ -10,10 +10,12 @@ import nox
 import toml
 
 
-nox.options.sessions = "lint", "mypy", "safety", "tests", "xdoctest"
+nox.options.sessions = "lint", "mypy", "safety", "tests", "xdoctest", "mindeps"
+PY_VERSIONS = ["3.9", "3.8", "3.7", "3.6.1"]
+PY_LATEST = "3.9"
 
 
-@nox.session(python=["3.9", "3.8", "3.7", "3.6"])
+@nox.session(python=PY_VERSIONS)
 def tests(session):
     """Run the test suite."""
     args = session.posargs or ["--cov"]
@@ -24,7 +26,7 @@ def tests(session):
     session.run("pytest", *args)
 
 
-@nox.session(python=["3.9", "3.8", "3.7", "3.6"])
+@nox.session(python=PY_VERSIONS)
 def xdoctest(session) -> None:
     """Run examples with xdoctest."""
     args = session.posargs or ["all"]
@@ -33,7 +35,7 @@ def xdoctest(session) -> None:
     session.run("python", "-m", "xdoctest", "grpc_interceptor", *args)
 
 
-@nox.session(python="3.9")
+@nox.session(python=PY_LATEST)
 def coverage(session):
     """Upload coverage data."""
     install_with_constraints(session, "coverage[toml]", "codecov")
@@ -41,7 +43,7 @@ def coverage(session):
     session.run("codecov", *session.posargs)
 
 
-@nox.session(python="3.9")
+@nox.session(python=PY_LATEST)
 def docs(session):
     """Build the documentation."""
     session.run("poetry", "install", "--no-dev", "-E", "testing", external=True)
@@ -52,7 +54,7 @@ def docs(session):
 SOURCE_CODE = ["src", "tests", "noxfile.py", "docs/conf.py"]
 
 
-@nox.session(python="3.9")
+@nox.session(python=PY_LATEST)
 def black(session):
     """Run black code formatter."""
     args = session.posargs or SOURCE_CODE
@@ -60,7 +62,7 @@ def black(session):
     session.run("black", *args)
 
 
-@nox.session(python="3.9")
+@nox.session(python=PY_LATEST)
 def lint(session):
     """Lint using flake8."""
     args = session.posargs or SOURCE_CODE
@@ -75,7 +77,7 @@ def lint(session):
     session.run("flake8", *args)
 
 
-@nox.session(python=["3.9", "3.8", "3.7", "3.6"])
+@nox.session(python=PY_VERSIONS)
 def mypy(session):
     """Type-check using mypy."""
     args = session.posargs or SOURCE_CODE
@@ -83,7 +85,7 @@ def mypy(session):
     session.run("mypy", *args)
 
 
-@nox.session(python="3.9")
+@nox.session(python=PY_LATEST)
 def safety(session):
     """Scan dependencies for insecure packages."""
     with _temp_file() as requirements:
@@ -100,7 +102,7 @@ def safety(session):
         session.run("safety", "check", f"--file={requirements}", "--full-report")
 
 
-@nox.session(python="3.6")
+@nox.session(python="3.6.1")
 def mindeps(session):
     """Run test with minimum versions of dependencies."""
     deps = _parse_minimum_dependency_versions()
@@ -148,6 +150,10 @@ def _parse_minimum_dependency_versions() -> List[str]:
                 continue
 
             if not isinstance(constraint, str):
+                # Don't install deps with python contraints, because they're always for
+                # newer versions on python.
+                if "python" in constraint:
+                    continue
                 constraint = constraint["version"]
 
             if constraint.startswith("^") or constraint.startswith("~"):
