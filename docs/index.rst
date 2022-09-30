@@ -251,7 +251,7 @@ Here's an async version of our running ``ExceptionToStatusInterceptor`` example:
             # Note that we do NOT await this.
             return self._intercept_streaming(response_or_iterator, context)
 
-        async def _intercept_streaming(self, iterator):
+        async def _intercept_streaming(self, iterator, context):
             try:
                 async for r in iterator:
                     yield r
