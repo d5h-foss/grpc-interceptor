@@ -339,9 +339,21 @@ Now inject your interceptor when you create the ``grpc`` channel:
         channel = grpc.intercept_channel(channel, *interceptors)
         ...
 
-Client interceptors can also be used to retry RPCs that fail due to specific errors, or
-a host of other use cases. There are some basic approaches in the tests to get you
-started.
+Client interceptors can also be used to
+`retry RPCs <https://github.com/d5h-foss/grpc-interceptor/blob/4b6bb6a59aae97aec058c0d4072dd19de8f408bc/tests/test_client.py#L39-L56>`_
+that fail due to specific errors, or a host of other use cases. There are some basic
+approaches in
+`the tests <https://github.com/d5h-foss/grpc-interceptor/blob/master/tests/test_client.py>`_
+to get you started.
+
+Note: The ``method`` in a client interceptor is a ``continuation`` as described in the
+`client interceptor section of the gRPC docs <https://grpc.github.io/grpc/python/grpc.html#grpc.UnaryUnaryClientInterceptor.intercept_unary_unary>`_.
+When you invoke the continuation, you get a future back, which resolves to either the
+result, or exception. This is different than invoking a client stub, which returns the
+result directly. If the interceptor needs the value returned by the call, or to catch
+exceptions, then you'll need to do ``future = method(request_or_iterator, call_details)``,
+followed by ``future.result()``. Check out the tests for
+`examples <https://github.com/d5h-foss/grpc-interceptor/blob/4b6bb6a59aae97aec058c0d4072dd19de8f408bc/tests/test_client.py#L39-L56>`_.
 
 Testing
 -------
