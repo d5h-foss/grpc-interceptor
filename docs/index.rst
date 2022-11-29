@@ -208,7 +208,7 @@ separately, like this:
 Async Server Interceptors
 """""""""""""""""""""""""
 
-Async interceptors are similar to sync ones, but there two things of which you need to
+Async interceptors are similar to sync ones, but there are two things of which you need to
 be aware.
 
 First, async server streaming RPCs that are implemented with ``async def + yield``
