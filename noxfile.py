@@ -21,7 +21,7 @@ def tests(session):
     args = session.posargs or ["--cov"]
     session.run("poetry", "install", "--no-dev", external=True)
     install_with_constraints(
-        session, "coverage[toml]", "grpcio-tools", "pytest", "pytest-cov"
+        session, "coverage", "grpcio-tools", "pytest", "pytest-cov"
     )
     session.run("pytest", *args)
 
@@ -38,7 +38,7 @@ def xdoctest(session) -> None:
 @nox.session(python=PY_LATEST)
 def coverage(session):
     """Upload coverage data."""
-    install_with_constraints(session, "coverage[toml]", "codecov")
+    install_with_constraints(session, "coverage", "codecov")
     session.run("coverage", "xml", "--fail-under=0")
     session.run("codecov", *session.posargs)
 

@@ -22,7 +22,7 @@ testing = ["protobuf"]
 [tool.poetry.dev-dependencies]
 pytest = "^6.1.0"
 grpcio-tools = "^1.32.0"
-coverage = {extras = ["toml"], version = "^5.2"}
+coverage = "^5.2"
 pytest-cov = "^2.10.0"
 black = "^19.10b0"
 flake8 = "^3.8.3"
@@ -37,17 +37,6 @@ sphinx = "^3.1.2"
 codecov = "^2.1.8"
 xdoctest = "^0.13.0"
 pytest-asyncio = {version = "^0.19.0", python = ">=3.7"}
-
-[tool.coverage.paths]
-source = ["src"]
-
-[tool.coverage.run]
-branch = true
-source = ["grpc_interceptor"]
-omit = ["*_pb2.py", "*_pb2_grpc.py"]
-
-[tool.coverage.report]
-show_missing = true
 
 [build-system]
 requires = ["poetry>=0.12"]
