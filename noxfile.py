@@ -36,7 +36,7 @@ def xdoctest(session) -> None:
 
 
 def poetry_install(session):
-    """Install this project via poetry"""
+    """Install this project via poetry."""
     if session.python.startswith("3.6."):
         # https://github.com/python-poetry/poetry/issues/4242
         session.run("poetry", "add", "--lock", "setuptools", external=True)
