@@ -112,7 +112,7 @@ def mindeps(session):
 
 def install_with_constraints(session, *args, **kwargs):
     """Install packages constrained by Poetry's lock file."""
-    packages = args + ["setuptools"] if session.python.startswith("3.6.") else args
+    packages = args + ("setuptools",) if session.python.startswith("3.6.") else args
     with _temp_file() as requirements:
         session.run(
             "poetry",
