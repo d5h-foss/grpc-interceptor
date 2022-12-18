@@ -19,7 +19,7 @@ PY_LATEST = "3.9"
 def tests(session):
     """Run the test suite."""
     args = session.posargs or ["--cov"]
-    session.run("poetry", "install", "--no-dev", external=True)
+    poetry_install(session)
     install_with_constraints(
         session, "coverage", "grpcio-tools", "pytest", "pytest-cov"
     )
@@ -30,9 +30,16 @@ def tests(session):
 def xdoctest(session) -> None:
     """Run examples with xdoctest."""
     args = session.posargs or ["all"]
-    session.run("poetry", "install", "--no-dev", external=True)
+    poetry_install(session)
     install_with_constraints(session, "xdoctest")
     session.run("python", "-m", "xdoctest", "grpc_interceptor", *args)
+
+
+def poetry_install(session):
+    if session.python.startswith("3.6."):
+        # https://github.com/python-poetry/poetry/issues/4242
+        session.run("poetry", "add", "--lock", "setuptools", external=True)
+    session.run("poetry", "install", "--no-dev", external=True)
 
 
 @nox.session(python=PY_LATEST)
@@ -112,7 +119,6 @@ def mindeps(session):
 
 def install_with_constraints(session, *args, **kwargs):
     """Install packages constrained by Poetry's lock file."""
-    packages = args + ("setuptools",) if session.python.startswith("3.6.") else args
     with _temp_file() as requirements:
         session.run(
             "poetry",
