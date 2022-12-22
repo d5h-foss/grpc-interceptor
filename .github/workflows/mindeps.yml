@@ -3,7 +3,7 @@ on: [push, pull_request]
 jobs:
     mindeps:
         runs-on: ubuntu-latest
-        container: python:3.6.1-slim
+        container: python:3.7-slim
         steps:
         - name: Installing dependencies
           run: |
