@@ -1,6 +1,6 @@
 """ExceptionToStatusInterceptor catches GrpcException and sets the gRPC context."""
 
-# Python 3.6 doesn't have asynccontextmanager so don't use it
+# TODO: use asynccontextmanager
 from contextlib import contextmanager
 from typing import (
     Any,

@@ -43,7 +43,3 @@ installation time (especially when solving constraints with newer pip or poetry)
 increases the likelihood of dependency conflicts, and generally just introduces more
 that can go wrong. Hence, this library depends on as little as possible, and can
 hopefully stay that way.
-
-I also try hard to keep this library compatible with Python 3.6. It's sometimes a pain,
-but people out there are still using it. I'd rather they can use this library, and it's
-usually not that much work to make the code compatible.

@@ -10,8 +10,8 @@ import nox
 import toml
 
 
-nox.options.sessions = "lint", "mypy", "safety", "tests", "xdoctest", "mindeps"
-PY_VERSIONS = ["3.9", "3.8", "3.7", "3.6.1"]
+nox.options.sessions = "lint", "mypy", "tests", "xdoctest", "mindeps"
+PY_VERSIONS = ["3.9", "3.8", "3.7"]
 PY_LATEST = "3.9"
 
 
@@ -102,7 +102,7 @@ def safety(session):
         session.run("safety", "check", f"--file={requirements}", "--full-report")
 
 
-@nox.session(python="3.6.1")
+@nox.session(python="3.7")
 def mindeps(session):
     """Run test with minimum versions of dependencies."""
     deps = _parse_minimum_dependency_versions()
