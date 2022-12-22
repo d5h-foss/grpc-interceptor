@@ -14,7 +14,8 @@ documentation = "https://grpc-interceptor.readthedocs.io"
 python = "^3.7"
 # Earliest version that supports aio w/o deadlock issue: https://github.com/grpc/grpc/pull/23945
 grpcio = "^1.32.0"
-protobuf = {version = ">=3.6.0", optional = true}
+# https://github.com/protocolbuffers/protobuf/issues/10075
+protobuf = {version = ">=4.21.9", optional = true}
 
 [tool.poetry.extras]
 testing = ["protobuf"]
