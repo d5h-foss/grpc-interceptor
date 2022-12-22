@@ -836,7 +836,7 @@ testing = ["protobuf"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.7"
-content-hash = "dfc05e1d3bf9be8c88602defeef95791c1d94e933468ff21592a9c0bdce15c59"
+content-hash = "b53bc18b2c054690f5305066f0c8e247478c50260cadc26b2c430149b55b2695"
 
 [metadata.files]
 alabaster = [
