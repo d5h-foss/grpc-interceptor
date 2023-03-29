@@ -11,8 +11,8 @@ import toml
 
 
 nox.options.sessions = "lint", "mypy", "tests", "xdoctest", "mindeps"
-PY_VERSIONS = ["3.9", "3.8", "3.7"]
-PY_LATEST = "3.9"
+PY_VERSIONS = ["3.11", "3.10", "3.9", "3.8", "3.7"]
+PY_LATEST = "3.10"
 
 
 @nox.session(python=PY_VERSIONS)
