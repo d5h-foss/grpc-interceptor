@@ -3,8 +3,11 @@
 import asyncio
 from concurrent import futures
 from contextlib import contextmanager
+import errno
+from itertools import chain, repeat, starmap
 import os
-from tempfile import gettempdir
+from random import randrange
+import socket
 from threading import Event, Thread
 from typing import (
     Any,
@@ -16,7 +19,6 @@ from typing import (
     List,
     Optional,
 )
-from uuid import uuid4
 
 import grpc
 
@@ -211,6 +213,15 @@ def dummy_client(
         yield client
 
 
+def _get_available_port() -> Optional[int]:
+    """Check port 50051 and random others; return the first available port."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sckt:
+        for port in chain([50051], starmap(randrange, repeat((32768, 60999), 10))):
+            if sckt.connect_ex(("localhost", port)) != 0:
+                return port
+    return None
+
+
 @contextmanager
 def dummy_channel(
     special_cases: Dict[str, SpecialCaseFunction],
@@ -224,12 +235,10 @@ def dummy_channel(
     if not interceptors:
         interceptors = []
 
-    if os.name == "nt":  # pragma: no cover
-        # We use Unix domain sockets when they're supported, to avoid port conflicts.
-        # However, on Windows, just pick a port.
-        channel_descriptor = "localhost:50051"
-    else:
-        channel_descriptor = f"unix://{gettempdir()}/{uuid4()}.sock"
+    port = _get_available_port()
+    if port is None:
+        raise OSError(errno.EBADF, os.strerror(errno.EBADF))
+    channel_descriptor = "localhost:" + str(port)
 
     if aio_client:
         channel = grpc_aio.insecure_channel(channel_descriptor)
