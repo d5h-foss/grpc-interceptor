@@ -11,8 +11,8 @@ import toml
 
 
 nox.options.sessions = "lint", "mypy", "tests", "xdoctest", "mindeps"
-PY_VERSIONS = ["3.9", "3.8", "3.7"]
-PY_LATEST = "3.9"
+PY_VERSIONS = ["3.11", "3.10", "3.9", "3.8", "3.7"]
+PY_LATEST = "3.11"
 
 
 @nox.session(python=PY_VERSIONS)
@@ -82,6 +82,7 @@ def mypy(session):
     """Type-check using mypy."""
     args = session.posargs or SOURCE_CODE
     install_with_constraints(session, "mypy")
+    session.run("mypy", "--install-types", "--non-interactive")
     session.run("mypy", *args)
 
 
