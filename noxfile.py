@@ -82,7 +82,7 @@ def mypy(session):
     """Type-check using mypy."""
     args = session.posargs or SOURCE_CODE
     install_with_constraints(session, "mypy")
-    session.run("mypy", "--install-types", "--non-interactive")
+    session.run("mypy", "--install-types", "--non-interactive", *args)
     session.run("mypy", *args)
 
 
