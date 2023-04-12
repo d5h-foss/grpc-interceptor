@@ -21,7 +21,7 @@ def tests(session):
     args = session.posargs or ["--cov"]
     session.run("poetry", "install", "--no-dev", external=True)
     install_with_constraints(
-        session, "coverage[toml]", "grpcio-tools", "pytest", "pytest-cov"
+        session, "coverage[toml]", "grpcio-tools", "pytest", "pytest-asyncio", "pytest-cov"
     )
     session.run("pytest", *args)
 
