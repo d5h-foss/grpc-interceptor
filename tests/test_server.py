@@ -187,7 +187,9 @@ def test_method_not_found():
 
     with dummy_channel(special_cases={}, interceptors=interceptors) as channel:
         with pytest.raises(grpc.RpcError) as e:
-            channel.unary_unary("/DummyService/Unimplemented",)(b"")
+            channel.unary_unary(
+                "/DummyService/Unimplemented",
+            )(b"")
         assert e.value.code() == grpc.StatusCode.UNIMPLEMENTED
         assert len(intr.num_calls) == 0
         assert len(intr.num_errors) == 0

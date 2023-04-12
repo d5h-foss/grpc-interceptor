@@ -53,7 +53,8 @@ class DummyService(dummy_pb2_grpc.DummyServiceServicer, _SpecialCaseMixin):
     """
 
     def __init__(
-        self, special_cases: Dict[str, SpecialCaseFunction],
+        self,
+        special_cases: Dict[str, SpecialCaseFunction],
     ):
         self._special_cases = special_cases
 
@@ -92,7 +93,8 @@ class AsyncDummyService(dummy_pb2_grpc.DummyServiceServicer, _SpecialCaseMixin):
     """
 
     def __init__(
-        self, special_cases: Dict[str, SpecialCaseFunction],
+        self,
+        special_cases: Dict[str, SpecialCaseFunction],
     ):
         self._special_cases = special_cases
 
@@ -139,7 +141,8 @@ class AsyncReadWriteDummyService(
     """
 
     def __init__(
-        self, special_cases: Dict[str, SpecialCaseFunction],
+        self,
+        special_cases: Dict[str, SpecialCaseFunction],
     ):
         self._special_cases = special_cases
 
@@ -150,7 +153,9 @@ class AsyncReadWriteDummyService(
         return DummyResponse(output=self._get_output(request, context))
 
     async def ExecuteClientStream(
-        self, unused_request: Any, context: grpc_aio.ServicerContext,
+        self,
+        unused_request: Any,
+        context: grpc_aio.ServicerContext,
     ) -> DummyResponse:
         """Iterate over the input and concatenates the strings into the output."""
         output = []

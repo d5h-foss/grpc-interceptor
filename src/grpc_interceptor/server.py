@@ -61,7 +61,10 @@ class ServerInterceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
         def invoke_intercept_method(request_or_iterator, context):
             method_name = handler_call_details.method
             return self.intercept(
-                next_handler_method, request_or_iterator, context, method_name,
+                next_handler_method,
+                request_or_iterator,
+                context,
+                method_name,
             )
 
         return handler_factory(
@@ -123,7 +126,10 @@ class AsyncServerInterceptor(grpc_aio.ServerInterceptor, metaclass=abc.ABCMeta):
             async def invoke_intercept_method(request, context):
                 method_name = handler_call_details.method
                 coroutine_or_asyncgen = self.intercept(
-                    next_handler_method, request, context, method_name,
+                    next_handler_method,
+                    request,
+                    context,
+                    method_name,
                 )
 
                 # Async server streaming handlers return async_generator, because they
@@ -151,7 +157,10 @@ class AsyncServerInterceptor(grpc_aio.ServerInterceptor, metaclass=abc.ABCMeta):
             async def invoke_intercept_method(request, context):
                 method_name = handler_call_details.method
                 return await self.intercept(
-                    next_handler_method, request, context, method_name,
+                    next_handler_method,
+                    request,
+                    context,
+                    method_name,
                 )
 
         return handler_factory(
