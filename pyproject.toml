@@ -23,15 +23,15 @@ testing = ["protobuf"]
 [tool.poetry.dev-dependencies]
 pytest = "^6.1.0"
 grpcio-tools = "^1.49.1"
-coverage = {extras = ["toml"], version = "^5.2"}
+coverage = {extras = ["toml"], version = "^7.2.3"}
 pytest-cov = "^2.10.0"
-black = "^19.10b0"
+black = "^23.3.0"
 flake8 = "^5.0.0"
 flake8-bandit = "^4.1.1"  # https://github.com/tylerwince/flake8-bandit/issues/21
 flake8-bugbear = "^20.1.4"
 flake8-import-order = "^0.18.1"
 safety = "^1.9.0"
-mypy = "^0.782"
+mypy = "^1.2.0"
 mypy-protobuf = "^1.23"
 flake8-docstrings = "^1.5.0"
 sphinx = "^3.1.2"

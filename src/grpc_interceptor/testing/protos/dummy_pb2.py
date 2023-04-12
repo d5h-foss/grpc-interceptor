@@ -44,7 +44,6 @@ _sym_db.RegisterMessage(DummyResponse)
 
 _DUMMYSERVICE = DESCRIPTOR.services_by_name["DummyService"]
 if _descriptor._USE_C_DESCRIPTORS == False:
-
     DESCRIPTOR._options = None
     _DUMMYREQUEST._serialized_start = 15
     _DUMMYREQUEST._serialized_end = 44

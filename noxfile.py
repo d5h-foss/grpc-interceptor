@@ -11,17 +11,22 @@ import toml
 
 
 nox.options.sessions = "lint", "mypy", "tests", "xdoctest", "mindeps"
-PY_VERSIONS = ["3.9", "3.8", "3.7"]
-PY_LATEST = "3.9"
+PY_VERSIONS = ["3.11", "3.10", "3.9", "3.8", "3.7"]
+PY_LATEST = "3.11"
 
 
 @nox.session(python=PY_VERSIONS)
 def tests(session):
     """Run the test suite."""
-    args = session.posargs or ["--cov"]
+    args = session.posargs or ["--cov", "-ra", "-vv"]
     session.run("poetry", "install", "--no-dev", external=True)
     install_with_constraints(
-        session, "coverage[toml]", "grpcio-tools", "pytest", "pytest-cov"
+        session,
+        "coverage[toml]",
+        "grpcio-tools",
+        "pytest",
+        "pytest-asyncio",
+        "pytest-cov",
     )
     session.run("pytest", *args)
 
@@ -82,6 +87,7 @@ def mypy(session):
     """Type-check using mypy."""
     args = session.posargs or SOURCE_CODE
     install_with_constraints(session, "mypy")
+    session.run("mypy", "--install-types", "--non-interactive", *args)
     session.run("mypy", *args)
 
 
