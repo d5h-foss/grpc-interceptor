@@ -18,7 +18,7 @@ PY_LATEST = "3.11"
 @nox.session(python=PY_VERSIONS)
 def tests(session):
     """Run the test suite."""
-    args = session.posargs or ["--cov"]
+    args = session.posargs or ["--cov", "-ra", "-vv"]
     session.run("poetry", "install", "--no-dev", external=True)
     install_with_constraints(
         session,
