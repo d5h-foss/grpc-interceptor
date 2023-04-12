@@ -149,16 +149,17 @@ category = "dev"
 description = "Code coverage measurement for Python"
 name = "coverage"
 optional = false
-python-versions = ">=2.7, !=3.0.*, !=3.1.*, !=3.2.*, !=3.3.*, !=3.4.*, <4"
-version = "5.5"
+python-versions = ">=3.7"
+version = "7.2.3"
 
 [package.dependencies]
-[package.dependencies.toml]
+[package.dependencies.tomli]
 optional = true
+python = "<=3.11.0a6"
 version = "*"
 
 [package.extras]
-toml = ["toml"]
+toml = ["tomli"]
 
 [[package]]
 category = "dev"
@@ -846,7 +847,7 @@ version = "0.10.2"
 [[package]]
 category = "dev"
 description = "A lil' TOML parser"
-marker = "python_version < \"3.11\""
+marker = "python_full_version <= \"3.11.0a6\" or python_version < \"3.11\""
 name = "tomli"
 optional = false
 python-versions = ">=3.7"
@@ -900,7 +901,7 @@ tests = ["pytest", "pytest-cov", "codecov", "scikit-build", "cmake", "ninja", "p
 [[package]]
 category = "dev"
 description = "Backport of pathlib-compatible object wrapper for zip files"
-marker = "python_version >= \"3.7\" and python_version < \"3.8\" or python_version < \"3.8\""
+marker = "python_version >= \"3.7\" and python_version < \"3.8\" or python_version < \"3.8\" or python_version >= \"3.7\" and python_version < \"3.8\" and (python_version >= \"3.7\" and python_version < \"3.8\" or python_version < \"3.8\")"
 name = "zipp"
 optional = false
 python-versions = ">=3.7"
@@ -914,7 +915,7 @@ testing = ["pytest (>=6)", "pytest-checkdocs (>=2.4)", "flake8 (<5)", "pytest-co
 testing = ["protobuf"]
 
 [metadata]
-content-hash = "327faf1ea88be510c5e51a25ad704308214ac64fb658e433500236df48a0e385"
+content-hash = "1056af36028d096ddf346475450b858e34249f7ba5c24f89e8d1fc2decf26451"
 python-versions = "^3.7"
 
 [metadata.files]

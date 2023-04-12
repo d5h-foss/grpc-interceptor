@@ -23,7 +23,7 @@ testing = ["protobuf"]
 [tool.poetry.dev-dependencies]
 pytest = "^6.1.0"
 grpcio-tools = "^1.49.1"
-coverage = {extras = ["toml"], version = "^5.2"}
+coverage = {extras = ["toml"], version = "^7.2.3"}
 pytest-cov = "^2.10.0"
 black = "^19.10b0"
 flake8 = "^5.0.0"
