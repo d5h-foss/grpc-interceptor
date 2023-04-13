@@ -18,7 +18,15 @@ PY_LATEST = "3.11"
 @nox.session(python=PY_VERSIONS)
 def tests(session):
     """Run the test suite."""
-    args = session.posargs or ["--cov", "-ra", "-vv"]
+    args = session.posargs or [
+        "--cov",
+        "--cov-report",
+        "term-missing",
+        "--cov-report",
+        "xml",
+        "-ra",
+        "-vv",
+    ]
     session.run("poetry", "install", "--no-dev", external=True)
     install_with_constraints(
         session,
@@ -38,14 +46,6 @@ def xdoctest(session) -> None:
     session.run("poetry", "install", "--no-dev", external=True)
     install_with_constraints(session, "xdoctest")
     session.run("python", "-m", "xdoctest", "grpc_interceptor", *args)
-
-
-@nox.session(python=PY_LATEST)
-def coverage(session):
-    """Upload coverage data."""
-    install_with_constraints(session, "coverage[toml]", "codecov")
-    session.run("coverage", "xml", "--fail-under=0")
-    session.run("codecov", *session.posargs)
 
 
 @nox.session(python=PY_LATEST)
