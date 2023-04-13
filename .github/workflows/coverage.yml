@@ -10,6 +10,7 @@ jobs:
               python-version: '3.11'
               architecture: x64
         - run: pip install nox==2022.1.7 toml==0.10.2 poetry==1.0.9
-        - run: nox --sessions tests-3.11 coverage
-          env:
-              CODECOV_TOKEN: ${{secrets.CODECOV_TOKEN}}
+        - run: nox --sessions tests-3.11
+        - uses: codecov/codecov-action@v3
+          with:
+            token: ${{ secrets.CODECOV_TOKEN }}

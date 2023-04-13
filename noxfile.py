@@ -41,14 +41,6 @@ def xdoctest(session) -> None:
 
 
 @nox.session(python=PY_LATEST)
-def coverage(session):
-    """Upload coverage data."""
-    install_with_constraints(session, "coverage[toml]", "codecov")
-    session.run("coverage", "xml", "--fail-under=0")
-    session.run("codecov", *session.posargs)
-
-
-@nox.session(python=PY_LATEST)
 def docs(session):
     """Build the documentation."""
     session.run("poetry", "install", "--no-dev", "-E", "testing", external=True)
