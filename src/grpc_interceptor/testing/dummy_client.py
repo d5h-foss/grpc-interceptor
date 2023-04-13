@@ -3,8 +3,6 @@
 import asyncio
 from concurrent import futures
 from contextlib import contextmanager
-import os
-from tempfile import gettempdir
 from threading import Event, Thread
 from typing import (
     Any,
@@ -16,7 +14,6 @@ from typing import (
     List,
     Optional,
 )
-from uuid import uuid4
 
 import grpc
 
@@ -229,23 +226,6 @@ def dummy_channel(
     if not interceptors:
         interceptors = []
 
-    if os.name == "nt":  # pragma: no cover
-        # We use Unix domain sockets when they're supported, to avoid port conflicts.
-        # However, on Windows, just pick a port.
-        channel_descriptor = "localhost:50051"
-    else:
-        channel_descriptor = f"unix://{gettempdir()}/{uuid4()}.sock"
-
-    if aio_client:
-        channel = grpc_aio.insecure_channel(channel_descriptor)
-        # Client interceptors might work, but I haven't tested them yet.
-        if client_interceptors:
-            raise TypeError("Client interceptors not supported with async channel")
-    else:
-        channel = grpc.insecure_channel(channel_descriptor)
-        if client_interceptors:
-            channel = grpc.intercept_channel(channel, *client_interceptors)
-
     if aio_server:
         service = (
             AsyncReadWriteDummyService(special_cases)
@@ -256,20 +236,39 @@ def dummy_channel(
         aio_thread = _AsyncServerThread(
             aio_loop,
             service,
-            channel if aio_client else None,
-            channel_descriptor,
             interceptors,
         )
         aio_thread.start()
         aio_thread.wait_for_server()
+        port = aio_thread.port
     else:
         dummy_service = DummyService(special_cases)
         server = grpc.server(
             futures.ThreadPoolExecutor(max_workers=1), interceptors=interceptors
         )
         dummy_pb2_grpc.add_DummyServiceServicer_to_server(dummy_service, server)
-        server.add_insecure_port(channel_descriptor)
+        port = server.add_insecure_port("localhost:0")
         server.start()
+
+    channel_descriptor = f"localhost:{port}"
+
+    if aio_client:
+        channel = grpc_aio.insecure_channel(channel_descriptor)
+        # Client interceptors might work, but I haven't tested them yet.
+        if client_interceptors:
+            raise TypeError("Client interceptors not supported with async channel")
+        # We close the channel in _AsyncServerThread because we need to await
+        # it, and doing that in this thread is problematic because dummy_client
+        # isn't always used in an async context. We could get around that by
+        # creating a new loop or something, but will be lazy and use the server
+        # thread / loop for now.
+        if not aio_server:
+            raise ValueError("aio_server must be True if aio_client is True")
+        aio_thread.async_channel = channel
+    else:
+        channel = grpc.insecure_channel(channel_descriptor)
+        if client_interceptors:
+            channel = grpc.intercept_channel(channel, *client_interceptors)
 
     try:
         yield channel
@@ -277,6 +276,7 @@ def dummy_channel(
         if not aio_client:
             # async channel is closed by _AsyncServerThread
             channel.close()
+
         if aio_server:
             aio_thread.stop()
             aio_thread.join()
@@ -285,19 +285,18 @@ def dummy_channel(
 
 
 class _AsyncServerThread(Thread):
+    port: int = 0
+    async_channel = None
+
     def __init__(
         self,
         loop: asyncio.AbstractEventLoop,
         service,
-        optional_async_client_channel,
-        channel_descriptor: str,
         interceptors: List[AsyncServerInterceptor],
     ):
         super().__init__()
         self.__loop = loop
         self.__service = service
-        self.__optional_async_client_channel = optional_async_client_channel
-        self.__channel_descriptor = channel_descriptor
         self.__interceptors = interceptors
         self.__started = Event()
 
@@ -308,12 +307,12 @@ class _AsyncServerThread(Thread):
     async def __run_server(self):
         self.__server = grpc_aio.server(interceptors=tuple(self.__interceptors))
         dummy_pb2_grpc.add_DummyServiceServicer_to_server(self.__service, self.__server)
-        self.__server.add_insecure_port(self.__channel_descriptor)
+        self.port = self.__server.add_insecure_port("localhost:0")
         await self.__server.start()
         self.__started.set()
         await self.__server.wait_for_termination()
-        if self.__optional_async_client_channel:
-            await self.__optional_async_client_channel.close()
+        if self.async_channel:
+            await self.async_channel.close()
 
     def wait_for_server(self):
         self.__started.wait()
