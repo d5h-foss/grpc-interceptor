@@ -1,9 +1,10 @@
 name: Release
 on:
-    release:
-        types: [published]
+    on: [push]
+    # release:
+    #     types: [published]
 jobs:
-    release:
+    build:
         runs-on: ubuntu-latest
         steps:
         - uses: actions/checkout@v2
@@ -14,4 +15,21 @@ jobs:
         - run: pip install nox==2022.1.7 toml==0.10.2 poetry==1.0.9
         - run: nox
         - run: poetry build
-        - run: poetry publish --username=__token__ --password=${{secrets.PYPI_TOKEN}}
+        - uses: actions/upload-artifact@v3
+          with:
+              name: dist
+              path: dist/
+    release:
+        needs: build
+        runs-on: ubuntu-latest
+        permissions:
+            id-token: write
+        environment:
+            name: pypi
+            url: https://pypi.org/p/grpc-interceptor
+        steps:
+        - uses: actions/download-artifact@v3
+          with:
+              name: dist
+        - name: Publish package distributions to PyPI
+          uses: pypa/gh-action-pypi-publish@release/v1
