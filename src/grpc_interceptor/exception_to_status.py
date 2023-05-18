@@ -14,6 +14,7 @@ from typing import (
 )
 
 import grpc
+from grpc import aio as grpc_aio
 
 from grpc_interceptor.exceptions import GrpcException
 from grpc_interceptor.server import AsyncServerInterceptor, ServerInterceptor
@@ -134,7 +135,7 @@ class AsyncExceptionToStatusInterceptor(AsyncServerInterceptor):
     async def _generate_responses(
         self,
         request_or_iterator: Any,
-        context: grpc.ServicerContext,
+        context: grpc_aio.ServicerContext,
         method_name: str,
         response_iterator: AsyncIterable,
     ) -> AsyncGenerator[Any, None]:
@@ -149,7 +150,7 @@ class AsyncExceptionToStatusInterceptor(AsyncServerInterceptor):
         self,
         ex: Exception,
         request_or_iterator: Any,
-        context: grpc.ServicerContext,
+        context: grpc_aio.ServicerContext,
         method_name: str,
     ) -> None:
         """Override this if extending ExceptionToStatusInterceptor.
@@ -180,7 +181,7 @@ class AsyncExceptionToStatusInterceptor(AsyncServerInterceptor):
         self,
         method: Callable,
         request_or_iterator: Any,
-        context: grpc.ServicerContext,
+        context: grpc_aio.ServicerContext,
         method_name: str,
     ) -> Any:
         """Do not call this directly; use the interceptor kwarg on grpc.server()."""
