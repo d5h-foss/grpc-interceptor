@@ -30,7 +30,8 @@ jobs:
         - uses: actions/download-artifact@v3
           with:
               name: dist
+              path: dist
         - name: Display artifacts
-          run: ls -R
+          run: ls -lR
         - name: Publish package distributions to PyPI
           uses: pypa/gh-action-pypi-publish@release/v1
