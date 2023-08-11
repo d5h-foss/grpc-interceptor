@@ -38,7 +38,11 @@ class _SpecialCaseMixin:
 
         return output
     
-    async def _get_output_async(self, request: DummyRequest, context: grpc.ServicerContext) -> str:
+    async def _get_output_async(
+        self,
+        request: DummyRequest,
+        context: grpc_aio.ServicerContext
+    ) -> str:
         input = request.input
 
         output = input
