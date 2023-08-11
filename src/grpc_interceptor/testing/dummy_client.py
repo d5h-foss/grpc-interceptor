@@ -1,5 +1,6 @@
 """Defines a service and client for testing interceptors."""
 
+from inspect import iscoroutine
 import asyncio
 from concurrent import futures
 from contextlib import contextmanager
@@ -36,7 +37,17 @@ class _SpecialCaseMixin:
             output = self._special_cases[input](input, context)
 
         return output
+    
+    async def _get_output_async(self, request: DummyRequest, context: grpc.ServicerContext) -> str:
+        input = request.input
 
+        output = input
+        if input in self._special_cases:
+            output = self._special_cases[input](input, context)
+            if iscoroutine(output):
+                output = await output
+
+        return output
 
 class DummyService(dummy_pb2_grpc.DummyServiceServicer, _SpecialCaseMixin):
     """A gRPC service used for testing.
@@ -99,7 +110,7 @@ class AsyncDummyService(dummy_pb2_grpc.DummyServiceServicer, _SpecialCaseMixin):
         self, request: DummyRequest, context: grpc_aio.ServicerContext
     ) -> DummyResponse:
         """Echo the input, or take on of the special cases actions."""
-        return DummyResponse(output=self._get_output(request, context))
+        return DummyResponse(output=await self._get_output_async(request, context))
 
     async def ExecuteClientStream(
         self,
@@ -108,7 +119,7 @@ class AsyncDummyService(dummy_pb2_grpc.DummyServiceServicer, _SpecialCaseMixin):
     ) -> DummyResponse:
         """Iterate over the input and concatenates the strings into the output."""
         output = "".join(
-            [self._get_output(request, context) async for request in request_iter]
+            [await self._get_output_async(request, context) async for request in request_iter]
         )
         return DummyResponse(output=output)
 
@@ -116,7 +127,7 @@ class AsyncDummyService(dummy_pb2_grpc.DummyServiceServicer, _SpecialCaseMixin):
         self, request: DummyRequest, context: grpc_aio.ServicerContext
     ) -> AsyncGenerator[DummyResponse, None]:
         """Stream one character at a time from the input."""
-        for c in self._get_output(request, context):
+        for c in await self._get_output_async(request, context):
             yield DummyResponse(output=c)
 
     async def ExecuteClientServerStream(
@@ -126,7 +137,7 @@ class AsyncDummyService(dummy_pb2_grpc.DummyServiceServicer, _SpecialCaseMixin):
     ) -> AsyncGenerator[DummyResponse, None]:
         """Stream input to output."""
         async for request in request_iter:
-            yield DummyResponse(output=self._get_output(request, context))
+            yield DummyResponse(output=await self._get_output_async(request, context))
 
 
 class AsyncReadWriteDummyService(
@@ -147,7 +158,7 @@ class AsyncReadWriteDummyService(
         self, request: DummyRequest, context: grpc_aio.ServicerContext
     ) -> DummyResponse:
         """Echo the input, or take on of the special cases actions."""
-        return DummyResponse(output=self._get_output(request, context))
+        return DummyResponse(output=await self._get_output_async(request, context))
 
     async def ExecuteClientStream(
         self,
@@ -160,7 +171,7 @@ class AsyncReadWriteDummyService(
             request = await context.read()
             if request == grpc_aio.EOF:
                 break
-            output.append(self._get_output(request, context))
+            output.append(await self._get_output_async(request, context))
 
         return DummyResponse(output="".join(output))
 
@@ -168,7 +179,7 @@ class AsyncReadWriteDummyService(
         self, request: DummyRequest, context: grpc_aio.ServicerContext
     ) -> None:
         """Stream one character at a time from the input."""
-        for c in self._get_output(request, context):
+        for c in await self._get_output_async(request, context):
             await context.write(DummyResponse(output=c))
 
     async def ExecuteClientServerStream(
@@ -182,7 +193,7 @@ class AsyncReadWriteDummyService(
             if request == grpc_aio.EOF:
                 break
             await context.write(
-                DummyResponse(output=self._get_output(request, context))
+                DummyResponse(output=await self._get_output_async(request, context))
             )
 
 
