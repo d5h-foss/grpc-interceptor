@@ -1,9 +1,9 @@
 """Defines a service and client for testing interceptors."""
 
-from inspect import iscoroutine
 import asyncio
 from concurrent import futures
 from contextlib import contextmanager
+from inspect import iscoroutine
 from threading import Event, Thread
 from typing import (
     Any,
@@ -37,7 +37,7 @@ class _SpecialCaseMixin:
             output = self._special_cases[input](input, context)
 
         return output
-    
+
     async def _get_output_async(
         self,
         request: DummyRequest,
@@ -52,6 +52,7 @@ class _SpecialCaseMixin:
                 output = await output
 
         return output
+
 
 class DummyService(dummy_pb2_grpc.DummyServiceServicer, _SpecialCaseMixin):
     """A gRPC service used for testing.
@@ -122,9 +123,10 @@ class AsyncDummyService(dummy_pb2_grpc.DummyServiceServicer, _SpecialCaseMixin):
         context: grpc_aio.ServicerContext,
     ) -> DummyResponse:
         """Iterate over the input and concatenates the strings into the output."""
-        output = "".join(
-            [await self._get_output_async(request, context) async for request in request_iter]
-        )
+        output = "".join([
+            await self._get_output_async(request, context)
+            async for request in request_iter
+        ])  # noqa: E501
         return DummyResponse(output=output)
 
     async def ExecuteServerStream(

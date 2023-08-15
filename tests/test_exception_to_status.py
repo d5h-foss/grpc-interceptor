@@ -1,6 +1,6 @@
 """Test cases for ExceptionToStatusInterceptor."""
 import re
-from typing import List, Optional, Union, Any
+from typing import Any, List, Optional, Union
 
 import grpc
 from grpc import aio as grpc_aio
@@ -158,23 +158,25 @@ def test_non_grpc_exception_with_override(aio):
 
 @pytest.mark.parametrize("aio", [False, True])
 def test_aborted_context(aio):
+    """If the context is aborted, the exception is propagated."""
     def error(request: Any, context: grpc.ServicerContext) -> None:
         context.abort(grpc.StatusCode.RESOURCE_EXHAUSTED, 'resource exhausted')
-        
-    async def async_error(request: Any, context: grpc_aio.ServicerContext) -> None:        
+
+    async def async_error(request: Any, context: grpc_aio.ServicerContext) -> None:
         await context.abort(grpc.StatusCode.RESOURCE_EXHAUSTED, 'resource exhausted')
-        
+
     interceptors = _get_interceptors(aio, grpc.StatusCode.INTERNAL)
     special_cases = {
         "error": async_error if aio else error
     }
-    
+
     with dummy_client(
         special_cases=special_cases, interceptors=interceptors, aio_server=aio
     ) as client:
         with pytest.raises(grpc.RpcError) as e:
             client.Execute(DummyRequest(input="error"))
         assert e.value.code() == grpc.StatusCode.RESOURCE_EXHAUSTED
+
 
 def test_override_with_ok():
     """We cannot set the default status code to OK."""

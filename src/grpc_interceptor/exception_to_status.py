@@ -33,7 +33,7 @@ class ExceptionToStatusInterceptor(ServerInterceptor):
         status_on_unknown_exception: Specify what to do if an exception which is
             not a subclass of GrpcException is raised. If None, do nothing (by
             default, grpc will set the status to UNKNOWN). If not None, then the
-            status code will be set to this value if `context.abort` hasn't been called 
+            status code will be set to this value if `context.abort` hasn't been called
             earlier. It must not be OK. The details will be set to the value of repr(e),
             where e is the exception. In any case, the exception will be propagated.
 
