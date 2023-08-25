@@ -176,6 +176,7 @@ def test_aborted_context(aio):
         with pytest.raises(grpc.RpcError) as e:
             client.Execute(DummyRequest(input="error"))
         assert e.value.code() == grpc.StatusCode.RESOURCE_EXHAUSTED
+        assert re.fullmatch(r"resource exhausted", e.value.details())
 
 
 def test_override_with_ok():
