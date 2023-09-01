@@ -10,6 +10,7 @@ from typing import (
     Generator,
     Iterable,
     Iterator,
+    NoReturn,
     Optional,
 )
 
@@ -73,7 +74,7 @@ class ExceptionToStatusInterceptor(ServerInterceptor):
         request_or_iterator: Any,
         context: grpc.ServicerContext,
         method_name: str,
-    ) -> None:
+    ) -> NoReturn:
         """Override this if extending ExceptionToStatusInterceptor.
 
         This will get called when an exception is raised while handling the RPC.
@@ -152,7 +153,7 @@ class AsyncExceptionToStatusInterceptor(AsyncServerInterceptor):
         request_or_iterator: Any,
         context: grpc_aio.ServicerContext,
         method_name: str,
-    ) -> None:
+    ) -> NoReturn:
         """Override this if extending ExceptionToStatusInterceptor.
 
         This will get called when an exception is raised while handling the RPC.
@@ -172,7 +173,7 @@ class AsyncExceptionToStatusInterceptor(AsyncServerInterceptor):
         """
         if isinstance(ex, GrpcException):
             await context.abort(ex.status_code, ex.details)
-        else:
+        elif not context.code():
             if self._status_on_unknown_exception is not None:
                 await context.abort(self._status_on_unknown_exception, repr(ex))
         raise ex

@@ -24,8 +24,8 @@ class ServerInterceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
     ) -> Any:  # pragma: no cover
         """Override this method to implement a custom interceptor.
 
-        You should call method(request, context) to invoke the next handler (either the
-        RPC method implementation, or the next interceptor in the list).
+        You should call method(request_or_iterator, context) to invoke the next handler
+        (either the RPC method implementation, or the next interceptor in the list).
 
         Args:
             method: Either the RPC method implementation, or the next interceptor in
@@ -37,7 +37,7 @@ class ServerInterceptor(grpc.ServerInterceptor, metaclass=abc.ABCMeta):
             method_name: A string of the form "/protobuf.package.Service/Method"
 
         Returns:
-            This should generally return the result of method(request, context), which
+            This should return the result of method(request, context), which
             is typically the RPC method response, as a protobuf message, or an
             iterator of protobuf messages for streaming responses. The interceptor is
             free to modify this in some way, however.
@@ -84,28 +84,30 @@ class AsyncServerInterceptor(grpc_aio.ServerInterceptor, metaclass=abc.ABCMeta):
     async def intercept(
         self,
         method: Callable,
-        request: Any,
+        request_or_iterator: Any,
         context: grpc_aio.ServicerContext,
         method_name: str,
     ) -> Any:  # pragma: no cover
         """Override this method to implement a custom interceptor.
 
-        You should call await method(request, context) to invoke the next handler
+        You should await method(request_or_iterator, context) to invoke the next handler
         (either the RPC method implementation, or the next interceptor in the list).
 
         Args:
             method: Either the RPC method implementation, or the next interceptor in
                 the chain.
-            request: The RPC request, as a protobuf message.
+            request_or_iterator: The RPC request, as a protobuf message if it is a
+                unary request, or an iterator of protobuf messages if it is a streaming
+                request.
             context: The ServicerContext pass by gRPC to the service.
             method_name: A string of the form "/protobuf.package.Service/Method"
 
         Returns:
-            This should generally return the result of await method(request, context),
+            This should return the result of method(request_or_iterator, context),
             which is typically the RPC method response, as a protobuf message. The
             interceptor is free to modify this in some way, however.
         """
-        response_or_iterator = method(request, context)
+        response_or_iterator = method(request_or_iterator, context)
         if hasattr(response_or_iterator, "__aiter__"):
             return response_or_iterator
         else:

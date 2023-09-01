@@ -14,6 +14,7 @@ from typing import (
     Iterable,
     List,
     Optional,
+    Union
 )
 
 import grpc
@@ -23,7 +24,9 @@ from grpc_interceptor.server import AsyncServerInterceptor, grpc_aio, ServerInte
 from grpc_interceptor.testing.protos import dummy_pb2_grpc
 from grpc_interceptor.testing.protos.dummy_pb2 import DummyRequest, DummyResponse
 
-SpecialCaseFunction = Callable[[str, grpc.ServicerContext], str]
+SpecialCaseFunction = Callable[
+    [str, Union[grpc.ServicerContext, grpc_aio.ServicerContext]], str
+]
 
 
 class _SpecialCaseMixin:
