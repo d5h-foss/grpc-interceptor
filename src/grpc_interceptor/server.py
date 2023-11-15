@@ -121,6 +121,10 @@ class AsyncServerInterceptor(grpc_aio.ServerInterceptor, metaclass=abc.ABCMeta):
         have a public name. Do not override it, unless you know what you're doing.
         """
         next_handler = await continuation(handler_call_details)
+        # Returns None if the method isn't implemented.
+        if not next_handler:
+            return
+
         handler_factory, next_handler_method = _get_factory_and_method(next_handler)
 
         if next_handler.response_streaming:
