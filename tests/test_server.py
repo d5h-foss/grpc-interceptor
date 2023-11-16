@@ -177,15 +177,19 @@ def test_aborting_interceptor(aio):
         assert e.value.details() == "oh no"
 
 
-def test_method_not_found():
+@pytest.mark.parametrize("aio", [False, True])
+def test_method_not_found(aio):
     """Calling undefined endpoints should return Unimplemented.
 
     Interceptors are not invoked when the RPC call is not handled.
     """
-    intr = CountingInterceptor()
+    intr_type = AsyncCountingInterceptor if aio else CountingInterceptor
+    intr = intr_type()
     interceptors = [intr]
 
-    with dummy_channel(special_cases={}, interceptors=interceptors) as channel:
+    with dummy_channel(
+        special_cases={}, interceptors=interceptors, aio_server=aio
+    ) as channel:
         with pytest.raises(grpc.RpcError) as e:
             channel.unary_unary(
                 "/DummyService/Unimplemented",
