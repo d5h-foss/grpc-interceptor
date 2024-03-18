@@ -4,6 +4,7 @@ import abc
 from typing import Any, Callable, Iterator, NamedTuple, Optional, Sequence, Tuple, Union
 
 import grpc
+from grpc import aio as grpc_aio
 
 
 class _ClientCallDetailsFields(NamedTuple):
@@ -129,6 +130,32 @@ class ClientInterceptor(
         a public name. Do not override it, unless you know what you're doing.
         """
         return self.intercept(_swap_args(continuation), request_iterator, call_details)
+
+
+class AsyncClientInterceptor(
+    grpc_aio.UnaryUnaryClientInterceptor,
+    grpc_aio.UnaryStreamClientInterceptor,
+    grpc_aio.StreamUnaryClientInterceptor,
+    grpc_aio.StreamStreamClientInterceptor,
+    metaclass=abc.ABCMeta,
+):
+    """Base class for asyncio server-side interceptors.
+
+    To implement an interceptor, subclass this class and override the intercept method.
+    """
+
+    @abc.abstractmethod
+    async def intercept(
+            self,
+            method: Callable,
+            request_or_iterator: Any,
+            call_details: grpc_aio.ClientCallDetails,
+    ) -> grpc_aio.Call:
+        response_or_iterator = method(request_or_iterator, call_details)
+        if hasattr(response_or_iterator, "__aiter__"):
+            return response_or_iterator
+        else:
+            return await response_or_iterator
 
 
 def _swap_args(fn: Callable[[Any, Any], Any]) -> Callable[[Any, Any], Any]:
